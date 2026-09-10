@@ -337,9 +337,8 @@ const compileMetaPattern = (
 ): void => {
   switch (pattern.type) {
     case "Any":
-      // Any matches everything - compile as predicate
-      literals.push({ kind: "Meta", pattern });
-      code.push({ type: "MatchPredicate", literalIndex: literals.length - 1 });
+      // `*` always matches: save the current path as a result, as the reference does
+      code.push({ type: "Save" });
       break;
 
     case "And": {

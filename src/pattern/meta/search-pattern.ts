@@ -9,7 +9,7 @@
  * @module pattern/meta/search-pattern
  */
 
-import type { Cbor, CborInput } from "@blockchaincommons/dcbor";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import {
   isArray,
   isMap,
@@ -18,7 +18,6 @@ import {
   arrayItem,
   mapKeys,
   mapValue,
-  cbor,
   asTaggedValue,
 } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
@@ -75,10 +74,7 @@ const searchRecursive = (
         // Search in values
         const rawValue = mapValue(haystack, key);
         if (rawValue !== undefined && rawValue !== null) {
-          // Wrap raw JavaScript value in CBOR if needed
-          const value = (rawValue as Cbor)?.isCbor
-            ? (rawValue as Cbor)
-            : cbor(rawValue as CborInput);
+          const value = rawValue;
           searchRecursive(pattern, value, [...currentPath, haystack], results);
         }
       }
@@ -170,10 +166,7 @@ const searchRecursiveWithCaptures = (
         // Search in values
         const rawValue = mapValue(haystack, key);
         if (rawValue !== undefined && rawValue !== null) {
-          // Wrap raw JavaScript value in CBOR if needed
-          const value = (rawValue as Cbor)?.isCbor
-            ? (rawValue as Cbor)
-            : cbor(rawValue as CborInput);
+          const value = rawValue;
           searchRecursiveWithCaptures(
             pattern,
             value,

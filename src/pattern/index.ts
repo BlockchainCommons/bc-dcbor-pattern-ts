@@ -36,8 +36,9 @@ import {
   structurePatternPathsWithCaptures,
 } from "./structure";
 import { type MetaPattern, metaPatternPaths, metaPatternDisplay } from "./meta";
-import { compilePattern } from "./matcher";
+import { compilePattern, collectPatternCaptureNames } from "./matcher";
 import { Vm } from "./vm";
+import { metaPatternPathsWithCaptures } from "./meta/captures";
 
 /**
  * The main Pattern type - a discriminated union of all pattern variants.
@@ -224,9 +225,21 @@ export const pathsWithCapturesDirect = (pattern: Pattern, haystack: Cbor): Match
  * @returns Match result with paths and captures
  */
 export const pathsWithCaptures = (pattern: Pattern, haystack: Cbor): MatchResult => {
-  const program = compilePattern(pattern);
-  const result = Vm.run(program, haystack);
-  return result;
+  // The reference's dispatch: no captures → plain paths; meta and structure
+  // patterns carry their own capture semantics; the VM serves sequences
+  // inside arrays (through the array pattern).
+  const names: string[] = [];
+  collectPatternCaptureNames(pattern, names);
+  if (names.length === 0) return { paths: patternPaths(pattern, haystack), captures: new Map() };
+  switch (pattern.kind) {
+    case "Meta":
+      return metaPatternPathsWithCaptures(pattern.pattern, haystack);
+    case "Structure":
+      // arrays with capturing element sequences run on the VM, as in the reference
+      return Vm.run(compilePattern(pattern), haystack);
+    case "Value":
+      return { paths: patternPaths(pattern, haystack), captures: new Map() };
+  }
 };
 
 /**

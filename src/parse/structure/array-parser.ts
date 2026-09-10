@@ -63,12 +63,12 @@ export const parseBracketArray = (lexer: Lexer): Result<Pattern> => {
     });
   }
 
-  // Check for closing bracket (empty array pattern [] - matches array with 0 elements)
+  // `[]` is any array (length `{0,}`), as in the reference; `[{0}]` is the empty array.
   if (token.type === "BracketClose") {
     lexer.next(); // consume the closing bracket
     return Ok({
       kind: "Structure",
-      pattern: { type: "Array", pattern: arrayPatternWithLengthInterval(Interval.exactly(0)) },
+      pattern: { type: "Array", pattern: arrayPatternWithLengthInterval(Interval.atLeast(0)) },
     });
   }
 

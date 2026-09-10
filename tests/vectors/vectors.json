@@ -1919,7 +1919,7 @@
     "k": "parse",
     "src": "[]"
    },
-   "expect": "[{0}]"
+   "expect": "[{0,}]"
   },
   {
    "name": "parse \"[number, text]\"",
@@ -2912,7 +2912,7 @@
     "pattern": "((number | text))",
     "hex": "20"
    },
-   "expect": "paths=[]"
+   "expect": "paths=[20]"
   },
   {
    "name": "match \"((number | text))\" on 6568656c6c6f",
@@ -2921,7 +2921,7 @@
     "pattern": "((number | text))",
     "hex": "6568656c6c6f"
    },
-   "expect": "paths=[]"
+   "expect": "paths=[6568656c6c6f]"
   },
   {
    "name": "match \"((number | text))\" on 8301617803",
@@ -3020,7 +3020,7 @@
     "pattern": "(number | text)",
     "hex": "20"
    },
-   "expect": "paths=[]"
+   "expect": "paths=[20]"
   },
   {
    "name": "match \"(number | text)\" on 6568656c6c6f",
@@ -3029,7 +3029,7 @@
     "pattern": "(number | text)",
     "hex": "6568656c6c6f"
    },
-   "expect": "paths=[]"
+   "expect": "paths=[6568656c6c6f]"
   },
   {
    "name": "match \"(number | text)\" on 8301617803",
@@ -4046,7 +4046,7 @@
     "pattern": "[@any_item(*)]",
     "hex": "8301617803"
    },
-   "expect": "paths=[8301617803] captures{any_item=[8301617803,03|8301617803,6178|8301617803,01]}"
+   "expect": "paths=[8301617803,03|8301617803|8301617803,6178|8301617803,01] captures{any_item=[8301617803,03|8301617803,6178|8301617803,01]}"
   },
   {
    "name": "match \"[@any_item(*)]\" on a261610161626374776f",
@@ -5657,7 +5657,7 @@
     "pattern": "@result(bool | (text & !null)) | @number(number)",
     "hex": "6568656c6c6f"
    },
-   "expect": "paths=[]"
+   "expect": "paths=[6568656c6c6f] captures{result=[6568656c6c6f]}"
   },
   {
    "name": "match \"@result(bool | (text & !null)) | @numbe on 8301617803",
@@ -7754,7 +7754,7 @@
     "pattern": "search([@a(*), @rest((*)*)])",
     "hex": "8301617803"
    },
-   "expect": "paths=[8301617803] captures{a=[8301617803];rest=[8301617803]}"
+   "expect": "paths=[8301617803] captures{a=[8301617803,01];rest=[8301617803,82617803]}"
   },
   {
    "name": "match \"search([@a(*), @rest((*)*)])\" on a261610161626374776f",
@@ -10958,7 +10958,7 @@
     "pattern": "[]",
     "hex": "8301617803"
    },
-   "expect": "paths=[]"
+   "expect": "paths=[8301617803]"
   },
   {
    "name": "match \"[]\" on a261610161626374776f",
@@ -11408,7 +11408,7 @@
     "pattern": "(number | text) & !bool",
     "hex": "20"
    },
-   "expect": "paths=[]"
+   "expect": "paths=[20]"
   },
   {
    "name": "match \"(number | text) & !bool\" on 6568656c6c6f",
@@ -11417,7 +11417,7 @@
     "pattern": "(number | text) & !bool",
     "hex": "6568656c6c6f"
    },
-   "expect": "paths=[]"
+   "expect": "paths=[6568656c6c6f]"
   },
   {
    "name": "match \"(number | text) & !bool\" on 8301617803",
@@ -11480,7 +11480,7 @@
     "pattern": "((((number))))",
     "hex": "20"
    },
-   "expect": "paths=[]"
+   "expect": "paths=[20]"
   },
   {
    "name": "match \"((((number))))\" on 6568656c6c6f",
@@ -17603,7 +17603,7 @@
     "k": "parse",
     "src": "[]"
    },
-   "expect": "[{0}]"
+   "expect": "[{0,}]"
   },
   {
    "name": "parse \"tagged(/^d/, [(tagged(42, *))*, [*], (*)*]) | [(search(text",
@@ -17875,7 +17875,7 @@
     "k": "parse",
     "src": "tagged(date, []) & @x1(tagged)"
    },
-   "expect": "tagged(date, [{0}]) & @x1(tagged)"
+   "expect": "tagged(date, [{0,}]) & @x1(tagged)"
   },
   {
    "name": "parse \"[(tagged(1, [])){2}]\"",
@@ -17883,7 +17883,7 @@
     "k": "parse",
     "src": "[(tagged(1, [])){2}]"
    },
-   "expect": "[(tagged(1, [{0}])){2}]"
+   "expect": "[(tagged(1, [{0,}])){2}]"
   },
   {
    "name": "parse \"{{3}}\"",
@@ -17915,7 +17915,7 @@
     "k": "parse",
     "src": "[] | text"
    },
-   "expect": "[{0}] | text"
+   "expect": "[{0,}] | text"
   },
   {
    "name": "parse \"[(text(\\\"x\\\"))*, false, (*)*]\"",
@@ -18083,7 +18083,7 @@
     "k": "parse",
     "src": "@a([])"
    },
-   "expect": "@a([{0}])"
+   "expect": "@a([{0,}])"
   },
   {
    "name": "parse \"(!digest) & (tagged(1, bstr))\"",
@@ -18275,7 +18275,7 @@
     "k": "parse",
     "src": "@b(tagged(100, []))"
    },
-   "expect": "@b(tagged(100, [{0}]))"
+   "expect": "@b(tagged(100, [{0,}]))"
   },
   {
    "name": "parse \"@a(bool)\"",
@@ -18299,7 +18299,7 @@
     "k": "parse",
     "src": "@x1([])"
    },
-   "expect": "@x1([{0}])"
+   "expect": "@x1([{0,}])"
   },
   {
    "name": "parse \"date(2023-06-15)\"",
@@ -18395,7 +18395,7 @@
     "k": "parse",
     "src": "[]"
    },
-   "expect": "[{0}]"
+   "expect": "[{0,}]"
   },
   {
    "name": "parse \"[([(tagged(date, *))*, tagged, (*)*])*, [*] | number(1...3)",
@@ -18483,7 +18483,7 @@
     "k": "parse",
     "src": "[]"
    },
-   "expect": "[{0}]"
+   "expect": "[{0,}]"
   },
   {
    "name": "parse \"@a([*])\"",
@@ -18531,7 +18531,7 @@
     "k": "parse",
     "src": "@item([])"
    },
-   "expect": "@item([{0}])"
+   "expect": "@item([{0,}])"
   },
   {
    "name": "parse \"{{2}}\"",
@@ -18707,7 +18707,7 @@
     "k": "parse",
     "src": "search([])"
    },
-   "expect": "search([{0}])"
+   "expect": "search([{0,}])"
   },
   {
    "name": "parse \"tagged(date, *)\"",
@@ -18843,7 +18843,7 @@
     "k": "parse",
     "src": "[]"
    },
-   "expect": "[{0}]"
+   "expect": "[{0,}]"
   },
   {
    "name": "parse \"search(!number(1...3) & true)\"",
@@ -18931,7 +18931,7 @@
     "k": "parse",
     "src": "[]"
    },
-   "expect": "[{0}]"
+   "expect": "[{0,}]"
   },
   {
    "name": "parse \"(map)\"",
@@ -19067,7 +19067,7 @@
     "k": "parse",
     "src": "@b(tagged(100, []))"
    },
-   "expect": "@b(tagged(100, [{0}]))"
+   "expect": "@b(tagged(100, [{0,}]))"
   },
   {
    "name": "parse \"![]\"",
@@ -19075,7 +19075,7 @@
     "k": "parse",
     "src": "![]"
    },
-   "expect": "![{0}]"
+   "expect": "![{0,}]"
   },
   {
    "name": "parse \"date(2023-06-15) | number\"",
@@ -19107,7 +19107,7 @@
     "k": "parse",
     "src": "[]"
    },
-   "expect": "[{0}]"
+   "expect": "[{0,}]"
   },
   {
    "name": "parse \"@b(!number(1.5))\"",
@@ -19171,7 +19171,7 @@
     "k": "parse",
     "src": "[]"
    },
-   "expect": "[{0}]"
+   "expect": "[{0,}]"
   },
   {
    "name": "parse \"@a({number(>1): number(>1)})\"",
@@ -19459,7 +19459,7 @@
     "k": "parse",
     "src": "!tagged(*, [])"
    },
-   "expect": "!tagged(*, [{0}])"
+   "expect": "!tagged(*, [{0,}])"
   },
   {
    "name": "parse \"search(known('isA'))\"",
@@ -19539,7 +19539,7 @@
     "k": "parse",
     "src": "[]"
    },
-   "expect": "[{0}]"
+   "expect": "[{0,}]"
   },
   {
    "name": "parse \"[({{2}})*, (text(\\\"hello\\\")), (*)*]\"",
@@ -19587,7 +19587,7 @@
     "k": "parse",
     "src": "@x1([])"
    },
-   "expect": "@x1([{0}])"
+   "expect": "@x1([{0,}])"
   },
   {
    "name": "parse \"map & date(2023-06-15) & (text(\\\"x\\\"))\"",
@@ -19691,7 +19691,7 @@
     "k": "parse",
     "src": "tagged(1, number) | []"
    },
-   "expect": "tagged(1, number) | [{0}]"
+   "expect": "tagged(1, number) | [{0,}]"
   },
   {
    "name": "parse \"{{2}}\"",

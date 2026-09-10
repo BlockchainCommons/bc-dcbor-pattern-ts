@@ -77,20 +77,10 @@ fn run(r: &serde_json::Value) -> String {
 /// S1  both reject with the same variant at a different span.
 /// S2  both reject with different variants (the reference's parser reports
 ///     the token it saw; TypeScript reports what it expected).
-/// P1  (pending) a parenthesised group outside an array never matches.
-/// P2  (pending) `[]` means "empty array" here and "any array" (displayed
-///     `[{0,}]`) in the reference.
-/// P3  (pending) captures of `*` inside arrays: the reference reports the
-///     element paths (and lists them among the match paths).
 fn expected_divergence(recipe: &serde_json::Value, got: &str, want: &str) -> Option<&'static str> {
     let variant = |s: &str| s.trim_start_matches("throw:").split('@').next().unwrap_or("").to_string();
     let both_reject = got.starts_with("throw:") && want.starts_with("throw:");
     if both_reject { return Some(if variant(got) == variant(want) { "S1" } else { "S2" }); }
-    let src = recipe.get("src").or_else(|| recipe.get("pattern")).and_then(|s| s.as_str()).unwrap_or("");
-    if got.contains("{0,}") && want.contains("{0}") && got.replace("{0,}", "{0}") == *want { return Some("P2"); }
-    if src.contains("[]") && !got.starts_with("throw") { return Some("P2"); }
-    if src.contains("(*)") || src.contains("@any_item(*)") || src.contains("@a(*)") { return Some("P3"); }
-    if src.starts_with('(') || src.contains("| (") || src.contains("(number") || src.contains("((") { return Some("P1"); }
     None
 }
 fn main() {

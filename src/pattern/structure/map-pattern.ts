@@ -8,8 +8,8 @@
  * @module pattern/structure/map-pattern
  */
 
-import type { Cbor, CborInput } from "@blockchaincommons/dcbor";
-import { isMap, mapSize, mapKeys, mapValue, cbor } from "@blockchaincommons/dcbor";
+import type { Cbor } from "@blockchaincommons/dcbor";
+import { isMap, mapSize, mapKeys, mapValue } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 import type { Pattern } from "../index";
 import { Interval } from "../../interval";
@@ -86,10 +86,7 @@ export const mapPatternMatches = (pattern: MapPattern, haystack: Cbor): boolean 
           if (matchPattern(keyPattern, key)) {
             const rawValue = mapValue(haystack, key);
             if (rawValue !== undefined && rawValue !== null) {
-              // Wrap raw JavaScript value in CBOR if needed
-              const value = (rawValue as Cbor)?.isCbor
-                ? (rawValue as Cbor)
-                : cbor(rawValue as CborInput);
+              const value = rawValue;
               if (matchPattern(valuePattern, value)) {
                 foundMatch = true;
                 break;
@@ -192,10 +189,7 @@ export const mapPatternPathsWithCaptures = (
           if (matchPattern(keyPattern, key)) {
             const rawValue = mapValue(haystack, key);
             if (rawValue !== undefined && rawValue !== null) {
-              // Wrap raw JavaScript value in CBOR if needed
-              const value = (rawValue as Cbor)?.isCbor
-                ? (rawValue as Cbor)
-                : cbor(rawValue as CborInput);
+              const value = rawValue;
               if (matchPattern(valuePattern, value)) {
                 // Collect captures from key pattern
                 collectCapturesFromPattern(keyPattern, key, haystack, captures);

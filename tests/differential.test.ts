@@ -45,6 +45,27 @@ const TOMBSTONES: {
       // the date may be truncated by `maxLength`
       a.replace(/\b1\(\d+\)/g, "") === b.replace(/\d{4}-\d\d-\d\d[^\n ]*/g, ""),
   },
+  {
+    // P2: `[]` is any array (displayed `[{0,}]`), as in the reference; the
+    // baseline read it as the empty array.
+    id: "T2-empty-array-is-any-array",
+    landed: true,
+    matches: (r, _a, _b) => (r.k === "parse" ? r.src : r.pattern).includes("[]"),
+  },
+  {
+    // P1/P3: matching with captures follows the reference's dispatch — meta
+    // patterns (groups, and/or/not, captures, search) carry their own
+    // semantics instead of the byte-code VM, so a group outside an array
+    // matches, `and`/`or`/`search` report the root path, and nested captures
+    // keep their element paths. The Rust harness proves each vector.
+    id: "T3-meta-capture-semantics",
+    landed: true,
+    matches: (r, a, b) =>
+      r.k !== "parse" &&
+      /[()&|!@]|search/.test(r.pattern) &&
+      !a.startsWith("throw") &&
+      !b.startsWith("throw"),
+  },
 ];
 
 const baseline = baselineAdapterFor(baselineMod);
