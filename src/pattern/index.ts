@@ -117,7 +117,7 @@ export const patternDisplay = (pattern: Pattern): string => {
  * @param haystack - The CBOR value to search
  * @returns Array of paths to matching elements
  */
-export const paths = patternPaths;
+export const paths: (pattern: Pattern, haystack: Cbor) => Path[] = patternPaths;
 
 /**
  * Checks if a pattern matches a CBOR value.
@@ -126,7 +126,7 @@ export const paths = patternPaths;
  * @param haystack - The CBOR value to test
  * @returns true if the pattern matches
  */
-export const matches = patternMatches;
+export const matches: (pattern: Pattern, haystack: Cbor) => boolean = patternMatches;
 
 /**
  * Computes paths with captures directly without using the VM.
@@ -232,7 +232,8 @@ export const pathsWithCaptures = (pattern: Pattern, haystack: Cbor): MatchResult
 /**
  * Alias for pathsWithCaptures for internal VM use.
  */
-export const patternPathsWithCaptures = pathsWithCaptures;
+export const patternPathsWithCaptures: (pattern: Pattern, haystack: Cbor) => MatchResult =
+  pathsWithCaptures;
 
 // ============================================================================
 // Pattern Constructors

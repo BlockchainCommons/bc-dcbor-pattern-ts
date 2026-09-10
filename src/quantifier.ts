@@ -186,4 +186,4 @@ export class Quantifier {
 /**
  * Default quantifier is exactly 1 occurrence, greedy.
  */
-export const DEFAULT_QUANTIFIER = Quantifier.exactly(1);
+export const DEFAULT_QUANTIFIER: Quantifier = Quantifier.exactly(1);

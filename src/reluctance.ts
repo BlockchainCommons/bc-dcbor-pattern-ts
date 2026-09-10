@@ -42,7 +42,7 @@ export enum Reluctance {
 /**
  * Default reluctance is Greedy.
  */
-export const DEFAULT_RELUCTANCE = Reluctance.Greedy;
+export const DEFAULT_RELUCTANCE: Reluctance = Reluctance.Greedy;
 
 /**
  * Returns the suffix character for a reluctance type.

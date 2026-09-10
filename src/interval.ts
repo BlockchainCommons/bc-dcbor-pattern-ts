@@ -231,4 +231,4 @@ export class Interval {
 /**
  * Default interval is exactly 1 occurrence.
  */
-export const DEFAULT_INTERVAL = Interval.exactly(1);
+export const DEFAULT_INTERVAL: Interval = Interval.exactly(1);
