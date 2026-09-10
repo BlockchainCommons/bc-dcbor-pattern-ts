@@ -9,7 +9,12 @@
  */
 
 import type { Cbor, Tag } from "@blockchaincommons/dcbor-compat";
-import { getGlobalTagsStore, isTagged, tagValue, tagContent } from "@blockchaincommons/dcbor-compat";
+import {
+  getGlobalTagsStore,
+  isTagged,
+  tagValue,
+  tagContent,
+} from "@blockchaincommons/dcbor-compat";
 import type { Path } from "../../format";
 import type { Pattern } from "../index";
 import { matchPattern, getPatternPathsWithCapturesDirect } from "../match-registry";

@@ -9,7 +9,13 @@
  */
 
 import type { Cbor } from "@blockchaincommons/dcbor-compat";
-import { tagValue, isTagged, tagContent, asBytes, bytesToHex } from "@blockchaincommons/dcbor-compat";
+import {
+  tagValue,
+  isTagged,
+  tagContent,
+  asBytes,
+  bytesToHex,
+} from "@blockchaincommons/dcbor-compat";
 import type { Digest } from "@blockchaincommons/components";
 import type { Path } from "../../format";
 import { bytesEqual, bytesStartsWith, bytesToLatin1 } from "./bytes-utils";
