@@ -8,8 +8,8 @@
  * @module pattern/structure/map-pattern
  */
 
-import type { Cbor, CborInput } from "@blockchaincommons/dcbor-compat";
-import { isMap, mapSize, mapKeys, mapValue, cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor, CborInput } from "@blockchaincommons/dcbor";
+import { isMap, mapSize, mapKeys, mapValue, cbor } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 import type { Pattern } from "../index";
 import { Interval } from "../../interval";

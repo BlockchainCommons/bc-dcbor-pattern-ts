@@ -8,8 +8,8 @@
  * @module pattern/value/null-pattern
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
-import { isNull } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
+import { isNull } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 
 /**

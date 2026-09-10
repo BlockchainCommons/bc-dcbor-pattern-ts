@@ -11,10 +11,11 @@
  * @module parse/token
  */
 
-import { parseDcborItemPartial } from "@blockchaincommons/dcbor-parse";
+import { tryParseDcborPrefix } from "@blockchaincommons/dcbor-parse";
 import { type Span, span, type Result, Ok, Err } from "../error";
 import { Quantifier } from "../quantifier";
 import { Reluctance } from "../reluctance";
+import { asNumber } from "@blockchaincommons/dcbor";
 
 /**
  * Token types for dCBOR pattern parsing.
@@ -875,13 +876,12 @@ export class Lexer {
     const numStr = this._input.slice(numStart, this._position);
 
     // Use dcbor-parse for dCBOR-compliant number parsing
-    const parseResult = parseDcborItemPartial(numStr);
+    const parseResult = tryParseDcborPrefix(numStr);
     if (!parseResult.ok) {
       return Err({ type: "InvalidNumberFormat", span: this.spanFrom(start) });
     }
 
-    const [cbor] = parseResult.value;
-    const numValue = cbor.asNumber();
+    const numValue = asNumber(parseResult.value.value);
 
     if (numValue === undefined) {
       return Err({ type: "InvalidNumberFormat", span: this.spanFrom(start) });

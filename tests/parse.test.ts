@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from "vitest";
 import { parse, patternDisplay, patternMatches } from "../src";
-import { cbor } from "@blockchaincommons/dcbor-compat";
+import { cbor } from "@blockchaincommons/dcbor";
 
 describe("parse", () => {
   describe("basic patterns", () => {

@@ -8,8 +8,8 @@
  * @module pattern/value/bool-pattern
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
-import { asBoolean } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
+import { asBoolean } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 
 /**

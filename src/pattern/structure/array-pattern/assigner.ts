@@ -11,7 +11,7 @@
  * @module pattern/structure/array-pattern/assigner
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import type { Pattern } from "../../index";
 import { hasRepeatPatternsInSlice } from "./helpers";
 import { GenericBacktracker, BooleanBacktrackState, AssignmentBacktrackState } from "./backtrack";

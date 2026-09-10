@@ -8,14 +8,8 @@
  * @module pattern/value/digest-pattern
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
-import {
-  tagValue,
-  isTagged,
-  tagContent,
-  asBytes,
-  bytesToHex,
-} from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
+import { tagValue, isTagged, asBytes, bytesToHex, asTaggedValue } from "@blockchaincommons/dcbor";
 import type { Digest } from "@blockchaincommons/components";
 import type { Path } from "../../format";
 import { bytesEqual, bytesStartsWith, bytesToLatin1 } from "./bytes-utils";
@@ -90,7 +84,7 @@ const extractDigestBytes = (haystack: Cbor): Uint8Array | undefined => {
   if (tag === undefined || Number(tag) !== DIGEST_TAG) {
     return undefined;
   }
-  const content = tagContent(haystack);
+  const content = asTaggedValue(haystack)?.[1];
   if (content === undefined) {
     return undefined;
   }
@@ -114,7 +108,7 @@ export const digestPatternMatches = (pattern: DigestPattern, haystack: Cbor): bo
     case "Any":
       return true;
     case "Value":
-      return bytesEqual(digestBytes, pattern.value.data());
+      return bytesEqual(digestBytes, pattern.value.bytes);
     case "Prefix":
       return bytesStartsWith(digestBytes, pattern.prefix);
     case "BinaryRegex": {
@@ -163,7 +157,7 @@ export const digestPatternDisplay = (pattern: DigestPattern): string => {
       return "digest";
     case "Value":
       // UR string preserves the full 32-byte digest unambiguously.
-      return `digest'${pattern.value.urString()}'`;
+      return `digest'${pattern.value.toUR().toString()}'`;
     case "Prefix":
       return `digest'${bytesToHex(pattern.prefix)}'`;
     case "BinaryRegex":

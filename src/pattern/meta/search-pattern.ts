@@ -9,7 +9,7 @@
  * @module pattern/meta/search-pattern
  */
 
-import type { Cbor, CborInput } from "@blockchaincommons/dcbor-compat";
+import type { Cbor, CborInput } from "@blockchaincommons/dcbor";
 import {
   isArray,
   isMap,
@@ -18,9 +18,9 @@ import {
   arrayItem,
   mapKeys,
   mapValue,
-  tagContent,
   cbor,
-} from "@blockchaincommons/dcbor-compat";
+  asTaggedValue,
+} from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 import type { Pattern } from "../index";
 import { matchPattern } from "../match-registry";
@@ -84,7 +84,7 @@ const searchRecursive = (
       }
     }
   } else if (isTagged(haystack)) {
-    const content = tagContent(haystack);
+    const content = asTaggedValue(haystack)?.[1];
     if (content !== undefined) {
       searchRecursive(pattern, content, [...currentPath, haystack], results);
     }
@@ -186,7 +186,7 @@ const searchRecursiveWithCaptures = (
       }
     }
   } else if (isTagged(haystack)) {
-    const content = tagContent(haystack);
+    const content = asTaggedValue(haystack)?.[1];
     if (content !== undefined) {
       searchRecursiveWithCaptures(
         pattern,

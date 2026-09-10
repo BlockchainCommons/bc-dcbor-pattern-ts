@@ -8,9 +8,10 @@
  * @module pattern/value/known-value-pattern
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
-import { tagValue, isTagged, tagContent, asUnsigned } from "@blockchaincommons/dcbor-compat";
-import { KnownValue, KNOWN_VALUE_TAG, KNOWN_VALUES } from "@blockchaincommons/known-values";
+import type { Cbor } from "@blockchaincommons/dcbor";
+import { tagValue, isTagged, asUnsigned, asTaggedValue } from "@blockchaincommons/dcbor";
+import { KnownValue, getGlobalKnownValuesStore } from "@blockchaincommons/known-values";
+import { KNOWN_VALUE } from "@blockchaincommons/tags";
 import type { Path } from "../../format";
 
 /**
@@ -76,10 +77,10 @@ const extractKnownValue = (haystack: Cbor): KnownValue | undefined => {
     return undefined;
   }
   const tag = tagValue(haystack);
-  if (!tagEquals(tag, KNOWN_VALUE_TAG.value)) {
+  if (!tagEquals(tag, KNOWN_VALUE.value)) {
     return undefined;
   }
-  const content = tagContent(haystack);
+  const content = asTaggedValue(haystack)?.[1];
   if (content === undefined) {
     return undefined;
   }
@@ -94,12 +95,12 @@ const extractKnownValue = (haystack: Cbor): KnownValue | undefined => {
  * Returns the name of the given KnownValue, looking it up in the global
  * registry first and falling back to the value's own (numeric) name string.
  *
- * Mirrors Rust's `KNOWN_VALUES.get().as_ref().name(value)` lookup in
+ * Mirrors Rust's `getGlobalKnownValuesStore().as_ref().name(value)` lookup in
  * `bc-dcbor-pattern-rust/src/pattern/value/known_value_pattern.rs`.
  */
 const resolveKnownValueName = (knownValue: KnownValue): string => {
-  const store = KNOWN_VALUES.get();
-  return store.name(knownValue);
+  const store = getGlobalKnownValuesStore();
+  return store.nameOf(knownValue);
 };
 
 /**
@@ -115,15 +116,15 @@ export const knownValuePatternMatches = (pattern: KnownValuePattern, haystack: C
     case "Any":
       return true;
     case "Value":
-      return knownValue.valueBigInt() === pattern.value.valueBigInt();
+      return knownValue.valueBigInt === pattern.value.valueBigInt;
     case "Named": {
       // Look up the requested name in the global registry. If the registry
       // doesn't know this name, no match. Otherwise compare numeric values.
       // Mirrors Rust's behavior in `KnownValuePattern::Name`.
-      const store = KNOWN_VALUES.get();
-      const expected = store.knownValueNamed(pattern.name);
+      const store = getGlobalKnownValuesStore();
+      const expected = store.byName(pattern.name);
       if (expected === undefined) return false;
-      return knownValue.valueBigInt() === expected.valueBigInt();
+      return knownValue.valueBigInt === expected.valueBigInt;
     }
     case "Regex":
       return pattern.pattern.test(resolveKnownValueName(knownValue));
@@ -148,7 +149,7 @@ export const knownValuePatternDisplay = (pattern: KnownValuePattern): string => 
     case "Any":
       return "known";
     case "Value":
-      return `'${pattern.value.name()}'`;
+      return `'${pattern.value.name}'`;
     case "Named":
       return `'${pattern.name}'`;
     case "Regex":

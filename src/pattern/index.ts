@@ -11,7 +11,7 @@
  * @module pattern
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import type { Path } from "../format";
 import {
   setMatchFn,
@@ -299,8 +299,8 @@ import { searchPattern as searchPatternCreate } from "./meta/search-pattern";
 import { sequencePattern as sequencePatternCreate } from "./meta/sequence-pattern";
 import { repeatPattern as repeatPatternCreate } from "./meta/repeat-pattern";
 import { Quantifier } from "../quantifier";
-import type { Tag } from "@blockchaincommons/dcbor-compat";
-import type { CborDate } from "@blockchaincommons/dcbor-compat";
+import type { Tag } from "@blockchaincommons/dcbor";
+import type { CborDate } from "@blockchaincommons/dcbor";
 import type { Digest } from "@blockchaincommons/components";
 import type { KnownValue } from "@blockchaincommons/known-values";
 

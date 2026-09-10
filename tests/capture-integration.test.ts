@@ -13,7 +13,7 @@ import {
   formatPathsWithCapturesStr,
   parsePattern,
 } from "./common";
-import { toTaggedValue } from "@blockchaincommons/dcbor-compat";
+import { taggedValue } from "@blockchaincommons/dcbor";
 
 describe("capture integration tests", () => {
   /**
@@ -187,15 +187,16 @@ describe("capture integration tests", () => {
    */
   it("test_capture_with_tagged", () => {
     const pattern = parse("tagged(1, @content(42))");
-    const cborData = toTaggedValue(1, 42);
+    const cborData = taggedValue(1, 42);
 
     const [paths, captures] = getPathsWithCaptures(pattern, cborData);
 
     // Validate formatted output with captures
+    // tag 1 is a date: the summariser registered with the standard tags renders it
     const expectedOutput = `@content
-    1(42)
+    1970-01-01T00:00:42Z
         42
-1(42)`;
+1970-01-01T00:00:42Z`;
     assertActualExpected(formatPathsWithCapturesStr(paths, captures), expectedOutput);
   });
 

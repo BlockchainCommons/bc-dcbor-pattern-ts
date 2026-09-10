@@ -8,13 +8,8 @@
  * @module pattern/structure/tagged-pattern
  */
 
-import type { Cbor, Tag } from "@blockchaincommons/dcbor-compat";
-import {
-  getGlobalTagsStore,
-  isTagged,
-  tagValue,
-  tagContent,
-} from "@blockchaincommons/dcbor-compat";
+import type { Cbor, Tag } from "@blockchaincommons/dcbor";
+import { getGlobalTagsStore, isTagged, tagValue, asTaggedValue } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 import type { Pattern } from "../index";
 import { matchPattern, getPatternPathsWithCapturesDirect } from "../match-registry";
@@ -110,7 +105,7 @@ export const taggedPatternMatches = (pattern: TaggedPattern, haystack: Cbor): bo
   }
 
   const tag = tagValue(haystack);
-  const content = tagContent(haystack);
+  const content = asTaggedValue(haystack)?.[1];
 
   if (content === undefined || tag === undefined) {
     return false;
@@ -158,7 +153,7 @@ export const taggedPatternPathsWithCaptures = (
   }
 
   const tag = tagValue(haystack);
-  const content = tagContent(haystack);
+  const content = asTaggedValue(haystack)?.[1];
 
   if (content === undefined) {
     return [[], new Map<string, Path[]>()];

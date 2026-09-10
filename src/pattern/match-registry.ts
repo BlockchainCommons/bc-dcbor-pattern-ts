@@ -9,7 +9,7 @@
  * @module pattern/match-registry
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import type { Path } from "../format";
 
 // Forward declare Pattern type to avoid circular import

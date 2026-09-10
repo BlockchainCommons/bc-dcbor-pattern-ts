@@ -6,7 +6,6 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { summary } from "@blockchaincommons/dcbor-compat";
 import { cbor, assertActualExpected } from "./common";
 import {
   run,
@@ -20,6 +19,7 @@ import {
   formatPaths,
   type Path,
 } from "../src";
+import { diagnostic } from "@blockchaincommons/dcbor/diagnostic";
 
 /**
  * Helper to run the VM and get paths and captures in a convenient format.
@@ -75,11 +75,15 @@ describe("vm navigation tests", () => {
 
     // The first element should be the array [42]
     const firstElement = capturedPath?.[0];
-    expect(firstElement ? summary(firstElement) : undefined).toBe("[42]");
+    expect(
+      firstElement ? diagnostic(firstElement, { summarize: true, flat: true }) : undefined,
+    ).toBe("[42]");
 
     // The second element should be 42
     const secondElement = capturedPath?.[1];
-    expect(secondElement ? summary(secondElement) : undefined).toBe("42");
+    expect(
+      secondElement ? diagnostic(secondElement, { summarize: true, flat: true }) : undefined,
+    ).toBe("42");
   });
 
   it("test_vm_map_navigation", () => {
@@ -121,11 +125,15 @@ describe("vm navigation tests", () => {
 
     // The first element should be the map
     const firstElement = capturedPath?.[0];
-    expect(firstElement ? summary(firstElement) : undefined).toBe('{"key": "value"}');
+    expect(
+      firstElement ? diagnostic(firstElement, { summarize: true, flat: true }) : undefined,
+    ).toBe('{"key": "value"}');
 
     // The second element should be the value
     const secondElement = capturedPath?.[1];
-    expect(secondElement ? summary(secondElement) : undefined).toBe('"value"');
+    expect(
+      secondElement ? diagnostic(secondElement, { summarize: true, flat: true }) : undefined,
+    ).toBe('"value"');
   });
 
   it("test_vm_nested_navigation", () => {
@@ -169,15 +177,21 @@ describe("vm navigation tests", () => {
 
     // The first element should be the outer array
     const firstElement = capturedPath?.[0];
-    expect(firstElement ? summary(firstElement) : undefined).toBe('[{"inner": 42}]');
+    expect(
+      firstElement ? diagnostic(firstElement, { summarize: true, flat: true }) : undefined,
+    ).toBe('[{"inner": 42}]');
 
     // The second element should be the inner map
     const secondElement = capturedPath?.[1];
-    expect(secondElement ? summary(secondElement) : undefined).toBe('{"inner": 42}');
+    expect(
+      secondElement ? diagnostic(secondElement, { summarize: true, flat: true }) : undefined,
+    ).toBe('{"inner": 42}');
 
     // The third element should be 42
     const thirdElement = capturedPath?.[2];
-    expect(thirdElement ? summary(thirdElement) : undefined).toBe("42");
+    expect(
+      thirdElement ? diagnostic(thirdElement, { summarize: true, flat: true }) : undefined,
+    ).toBe("42");
   });
 
   it("test_vm_multiple_captures", () => {

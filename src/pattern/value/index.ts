@@ -17,7 +17,7 @@ export * from "./date-pattern";
 export * from "./digest-pattern";
 export * from "./known-value-pattern";
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 
 import { type BoolPattern, boolPatternPaths, boolPatternDisplay } from "./bool-pattern";

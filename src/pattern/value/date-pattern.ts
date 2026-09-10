@@ -8,8 +8,8 @@
  * @module pattern/value/date-pattern
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
-import { CborDate, tagValue, isTagged } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
+import { CborDate, tagValue, isTagged } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 
 /**
@@ -128,15 +128,16 @@ export const datePatternMatches = (pattern: DatePattern, haystack: Cbor): boolea
     case "Any":
       return true;
     case "Value":
-      return date.timestamp() === pattern.value.timestamp();
+      return date.epochSeconds === pattern.value.epochSeconds;
     case "Range":
       return (
-        date.timestamp() >= pattern.min.timestamp() && date.timestamp() <= pattern.max.timestamp()
+        date.epochSeconds >= pattern.min.epochSeconds &&
+        date.epochSeconds <= pattern.max.epochSeconds
       );
     case "Earliest":
-      return date.timestamp() >= pattern.value.timestamp();
+      return date.epochSeconds >= pattern.value.epochSeconds;
     case "Latest":
-      return date.timestamp() <= pattern.value.timestamp();
+      return date.epochSeconds <= pattern.value.epochSeconds;
     case "StringValue":
       return date.toString() === pattern.value;
     case "Regex":

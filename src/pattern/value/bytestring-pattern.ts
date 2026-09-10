@@ -8,8 +8,8 @@
  * @module pattern/value/bytestring-pattern
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
-import { asBytes, bytesToHex } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
+import { asBytes, bytesToHex } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 import { bytesEqual, bytesToLatin1 } from "./bytes-utils";
 

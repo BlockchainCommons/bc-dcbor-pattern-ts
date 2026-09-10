@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from "vitest";
 import { cbor, parse, matches } from "./common";
-import type { CborInput } from "@blockchaincommons/dcbor-compat";
+import type { CborInput } from "@blockchaincommons/dcbor";
 
 describe("complex array parsing", () => {
   describe("test_complex_array_pattern_text_parsing", () => {

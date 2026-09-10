@@ -19,13 +19,13 @@ import type { Pattern } from "../../pattern";
 import type { Result } from "../../error";
 import { Ok, Err } from "../../error";
 import { anyTagged } from "../../pattern";
-import { createTag } from "@blockchaincommons/dcbor-compat";
 import {
   taggedPatternWithTag,
   taggedPatternWithName,
   taggedPatternWithRegex,
 } from "../../pattern/structure/tagged-pattern";
 import { parse } from "../index";
+import { Tag } from "@blockchaincommons/dcbor";
 
 /**
  * Tag selector discriminated union.
@@ -94,7 +94,7 @@ export const parseTagged = (lexer: Lexer): Result<Pattern> => {
   let taggedPattern;
   switch (tagSelector.type) {
     case "Value": {
-      const tag = createTag(BigInt(tagSelector.value));
+      const tag = Tag.from(tagSelector.value);
       taggedPattern = taggedPatternWithTag(tag, contentPattern);
       break;
     }

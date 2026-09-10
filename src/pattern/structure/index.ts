@@ -12,7 +12,7 @@ export * from "./array-pattern";
 export * from "./map-pattern";
 export * from "./tagged-pattern";
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 import type { Pattern } from "../index";
 

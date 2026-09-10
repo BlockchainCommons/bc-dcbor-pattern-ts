@@ -17,7 +17,7 @@ export * from "./capture-pattern";
 export * from "./search-pattern";
 export * from "./sequence-pattern";
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 import type { Pattern } from "../index";
 

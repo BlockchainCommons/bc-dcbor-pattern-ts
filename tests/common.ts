@@ -8,7 +8,7 @@
  */
 
 import { expect } from "vitest";
-import { cbor as createCbor, type Cbor, type CborInput } from "@blockchaincommons/dcbor-compat";
+import { cbor as createCbor, type Cbor, type CborInput } from "@blockchaincommons/dcbor";
 import {
   parse as parsePattern,
   type Pattern,

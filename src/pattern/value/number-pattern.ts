@@ -8,8 +8,8 @@
  * @module pattern/value/number-pattern
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
-import { asNumber, isNumber } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
+import { asNumber, isNumber } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 
 /**

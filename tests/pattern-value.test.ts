@@ -2,9 +2,10 @@
  * Value pattern tests ported from pattern_tests_value.rs
  */
 
+import { tryParseDcbor } from "@blockchaincommons/dcbor-parse";
 import { describe, it, expect } from "vitest";
-import { CborDate, registerTags, type Cbor } from "@blockchaincommons/dcbor-compat";
-import { parseDcborItem } from "@blockchaincommons/dcbor-parse";
+import { CborDate, type Cbor, getGlobalTagsStore } from "@blockchaincommons/dcbor";
+import { registerTags } from "@blockchaincommons/tags";
 import { IS_A, DATE } from "@blockchaincommons/known-values";
 import {
   textRegex,
@@ -41,7 +42,7 @@ const dateToCbor = (d: CborDate): Cbor => {
  * Helper to parse a CBOR diagnostic notation string into a Cbor object.
  */
 const cborFromString = (s: string): Cbor => {
-  const result = parseDcborItem(s);
+  const result = tryParseDcbor(s);
   if (!result.ok) {
     throw new Error(`Failed to parse CBOR: ${s}`);
   }
@@ -403,7 +404,7 @@ describe("value pattern tests", () => {
 
   describe("date patterns", () => {
     it("test_date_pattern_any", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
       const pattern = parse("date");
 
       // Should match any date
@@ -421,7 +422,7 @@ describe("value pattern tests", () => {
     });
 
     it("test_date_pattern_specific", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
 
       const date = CborDate.fromYmd(2023, 12, 25);
       const pattern = datePattern(date);
@@ -442,7 +443,7 @@ describe("value pattern tests", () => {
     });
 
     it("test_date_pattern_range", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
 
       const startDate = CborDate.fromYmd(2023, 12, 20);
       const endDate = CborDate.fromYmd(2023, 12, 30);
@@ -476,7 +477,7 @@ describe("value pattern tests", () => {
     });
 
     it("test_date_pattern_earliest", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
 
       const earliestDate = CborDate.fromYmd(2023, 12, 20);
       const pattern = dateEarliest(earliestDate);
@@ -499,7 +500,7 @@ describe("value pattern tests", () => {
     });
 
     it("test_date_pattern_latest", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
 
       const latestDate = CborDate.fromYmd(2023, 12, 30);
       const pattern = dateLatest(latestDate);
@@ -522,7 +523,7 @@ describe("value pattern tests", () => {
     });
 
     it("test_date_pattern_iso8601", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
       const date = CborDate.fromYmd(2023, 12, 25);
       const isoString = date.toString();
       const pattern = dateIso8601(isoString);
@@ -539,7 +540,7 @@ describe("value pattern tests", () => {
     });
 
     it("test_date_pattern_regex", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
 
       // Pattern to match any date in 2023
       const pattern = dateRegex(/^2023-/);
@@ -569,9 +570,9 @@ describe("value pattern tests", () => {
     });
 
     it("test_date_pattern_with_time", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
       // Test with dates that include time components
-      const datetime = CborDate.fromTimestamp(1703462400.0); // 2023-12-25 00:00:00 UTC
+      const datetime = CborDate.fromEpochSeconds(1703462400.0); // 2023-12-25 00:00:00 UTC
       const pattern = parse("date");
 
       const datetimeCbor = dateToCbor(datetime);
@@ -584,14 +585,14 @@ describe("value pattern tests", () => {
       assertActualExpected(formatPathsStr(paths2), "2023-12-25");
 
       // Test with fractional seconds
-      const datetimeWithMillis = CborDate.fromTimestamp(1703462400.123);
+      const datetimeWithMillis = CborDate.fromEpochSeconds(1703462400.123);
       const datetimeWithMillisCbor = dateToCbor(datetimeWithMillis);
       const paths3 = getPaths(pattern, datetimeWithMillisCbor);
       assertActualExpected(formatPathsStr(paths3), "2023-12-25");
     });
 
     it("test_date_pattern_display", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
       expect(display(parse("date"))).toBe("date");
 
       const date = CborDate.fromYmd(2023, 12, 25);
@@ -647,7 +648,7 @@ describe("value pattern tests", () => {
     });
 
     it("test_known_value_pattern_specific", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
 
       const isAPattern = parse("'isA'");
       const dateValPattern = parse("'date'");
@@ -678,7 +679,7 @@ describe("value pattern tests", () => {
     });
 
     it("test_known_value_pattern_named", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
 
       const isAPattern = parse("'isA'");
       const dateValPattern = parse("'date'");
@@ -871,7 +872,7 @@ describe("value pattern tests", () => {
     });
 
     it("test_map_known_value_keys", () => {
-      registerTags();
+      registerTags(getGlobalTagsStore());
       const mapPattern = parse("{'100': text}");
       const data = cborFromString(`{'100': "first", '200': "second"}`);
       const paths = getPaths(mapPattern, data);

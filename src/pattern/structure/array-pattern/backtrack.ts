@@ -11,7 +11,7 @@
  * @module pattern/structure/array-pattern/backtrack
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import type { Pattern } from "../../index";
 import type { RepeatPattern } from "../../meta/repeat-pattern";
 import { extractCaptureWithRepeat, calculateRepeatBounds, canRepeatMatch } from "./helpers";

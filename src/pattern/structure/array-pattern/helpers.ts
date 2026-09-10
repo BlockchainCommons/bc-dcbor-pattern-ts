@@ -8,7 +8,7 @@
  * @module pattern/structure/array-pattern/helpers
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import type { Pattern } from "../../index";
 import type { RepeatPattern } from "../../meta/repeat-pattern";
 import type { Quantifier } from "../../../quantifier";

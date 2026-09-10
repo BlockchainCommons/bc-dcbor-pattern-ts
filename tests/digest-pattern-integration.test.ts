@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { cbor, toTaggedValue } from "@blockchaincommons/dcbor-compat";
+import { cbor, taggedValue } from "@blockchaincommons/dcbor";
 import { parse, patternMatches, patternDisplay, anyDigest, digest, digestPrefix } from "../src";
 import { Digest, hexToBytes } from "@blockchaincommons/components";
 
@@ -15,11 +15,11 @@ const DIGEST_TAG = 40001n;
 /**
  * Creates a tagged CBOR value for a Digest.
  *
- * Note: We use toTaggedValue with a bigint tag because the digest pattern
+ * Note: We use taggedValue with a bigint tag because the digest pattern
  * matching code compares tags using strict equality (===) with bigint.
  */
 const createDigestCbor = (digestValue: Digest) => {
-  return toTaggedValue(DIGEST_TAG, digestValue.untaggedCbor());
+  return taggedValue(DIGEST_TAG, digestValue.untaggedCbor());
 };
 
 describe("digest pattern integration", () => {
@@ -63,7 +63,7 @@ describe("digest pattern integration", () => {
       // `DigestPattern.Value` whose Display also emits the same UR
       // string — so round-trip is exact.
       const digestValue = Digest.fromImage(new TextEncoder().encode("hello world"));
-      const urString = digestValue.urString();
+      const urString = digestValue.toUR().toString();
       const src = `digest'${urString}'`;
       const result = parse(src);
       expect(result.ok).toBe(true);
@@ -90,7 +90,7 @@ describe("digest pattern integration", () => {
       const digestCbor = createDigestCbor(digestValue);
 
       // Get the hex representation of the digest
-      const digestHex = digestValue.hex();
+      const digestHex = digestValue.toHex();
       const specificPattern = parse(`digest'${digestHex}'`);
       expect(specificPattern.ok).toBe(true);
       if (specificPattern.ok) {
@@ -105,7 +105,7 @@ describe("digest pattern integration", () => {
       const otherDigestCbor = createDigestCbor(otherDigest);
 
       // Create pattern matching the first digest
-      const digestHex = digestValue.hex();
+      const digestHex = digestValue.toHex();
       const specificPattern = parse(`digest'${digestHex}'`);
       expect(specificPattern.ok).toBe(true);
       if (specificPattern.ok) {
@@ -119,7 +119,7 @@ describe("digest pattern integration", () => {
       const digestCbor = createDigestCbor(digestValue);
 
       // Get the first 4 bytes of the digest as a prefix
-      const prefixBytes = digestValue.data().slice(0, 4);
+      const prefixBytes = digestValue.bytes.slice(0, 4);
       const prefixPattern = digestPrefix(prefixBytes);
 
       expect(patternMatches(prefixPattern, digestCbor)).toBe(true);
@@ -268,7 +268,7 @@ describe("digest pattern integration", () => {
       const digestCbor = createDigestCbor(digestValue);
 
       // Use first 8 bytes as prefix
-      const prefixBytes = digestValue.data().slice(0, 8);
+      const prefixBytes = digestValue.bytes.slice(0, 8);
       const pattern = digestPrefix(prefixBytes);
 
       expect(patternMatches(pattern, digestCbor)).toBe(true);

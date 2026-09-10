@@ -10,8 +10,8 @@
  * @module pattern/vm
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
-import { cborData, bytesToHex } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
+import { bytesToHex, asTaggedValue, encodeCbor } from "@blockchaincommons/dcbor";
 import {
   isArray,
   isMap,
@@ -20,8 +20,7 @@ import {
   arrayItem,
   mapKeys,
   mapValues,
-  tagContent,
-} from "@blockchaincommons/dcbor-compat";
+} from "@blockchaincommons/dcbor";
 import type { Path } from "../format";
 import type { Pattern } from "./index";
 import type { Quantifier } from "../quantifier";
@@ -69,7 +68,7 @@ export const axisChildren = (axis: Axis, cbor: Cbor): Cbor[] => {
     }
     case "TaggedContent": {
       if (!isTagged(cbor)) return [];
-      const content = tagContent(cbor);
+      const content = asTaggedValue(cbor)?.[1];
       if (content === undefined) return [];
       return [content];
     }
@@ -138,8 +137,8 @@ const cborEquals = (a: Cbor, b: Cbor): boolean => {
   let ad: Uint8Array;
   let bd: Uint8Array;
   try {
-    ad = cborData(a);
-    bd = cborData(b);
+    ad = encodeCbor(a);
+    bd = encodeCbor(b);
   } catch {
     // Pathological CBOR (e.g. cyclic input) → treat as not equal.
     return false;
@@ -167,7 +166,7 @@ const pathHash = (path: Path): string => {
   const parts: string[] = [];
   for (const item of path) {
     try {
-      parts.push(bytesToHex(cborData(item)));
+      parts.push(bytesToHex(encodeCbor(item)));
     } catch {
       // Fallback for non-CBOR objects: stringify so the hash is at
       // least stable. This branch should be unreachable for the

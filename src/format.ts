@@ -22,7 +22,8 @@
  * @module format
  */
 
-import { type Cbor, summary, diagnosticOpt } from "@blockchaincommons/dcbor-compat";
+import { type Cbor } from "@blockchaincommons/dcbor";
+import { diagnostic } from "@blockchaincommons/dcbor/diagnostic";
 
 /**
  * A Path is a sequence of CBOR values representing the traversal from root
@@ -173,20 +174,11 @@ const truncateWithEllipsis = (s: string, maxLength?: number): string => {
  * @param maxLength - Maximum length before truncation
  * @returns The formatted string
  */
-const formatCborElement = (cbor: Cbor, format: PathElementFormat, maxLength?: number): string => {
-  let diagnostic: string;
-
-  // Use the diagnostic functions from @blockchaincommons/dcbor-compat
-  if (format === PathElementFormat.DiagnosticSummary) {
-    // summary() provides a compact representation with summarizers
-    diagnostic = summary(cbor);
-  } else {
-    // diagnosticOpt with flat: true and summarize: true provides a single-line
-    // representation with date/time formatting for known tags like tag 1
-    diagnostic = diagnosticOpt(cbor, { flat: true, summarize: true });
-  }
-
-  return truncateWithEllipsis(diagnostic, maxLength);
+const formatCborElement = (cbor: Cbor, _format: PathElementFormat, maxLength?: number): string => {
+  // Both element formats render the summarised, single-line diagnostic (the
+  // pre-redesign `summary` and `diagnosticOpt(flat, summarize)` were the same).
+  const text = diagnostic(cbor, { summarize: true, flat: true });
+  return truncateWithEllipsis(text, maxLength);
 };
 
 /**

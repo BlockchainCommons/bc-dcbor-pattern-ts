@@ -17,23 +17,51 @@ differs from the Rust reference. It has three kinds of entry:
 2. **JS-only input domain** - inputs that have no Rust analog, so there is nothing to diverge from.
 3. **Mapping equivalences** - JS-specific inputs that are validated through the bytes they produce.
 
+Every entry below is checked by `tests/rust-validation`, a Rust program that
+builds `dcbor-pattern` at the tracked commit and replays
+`tests/vectors/vectors.json` (2 151 vectors: every pattern string of both
+implementations' suites parsed and displayed, matched against a fixed set of
+haystacks, and formatted; plus generated patterns), comparing displays, path
+elements as dCBOR hex, captures, formatted output, and error variants and
+spans. The current run: **1 886 match, 265 expected divergences, 0
+mismatches.**
+
 ## 1. True behavioral divergences
 
-_None recorded yet for the extraction release. The port was byte-compatible with
-the Rust reference at the tracked version when it was extracted from the
-`paritytech/bcts` monorepo._
+### Pending fixes (Phase 3)
 
-> Any divergence found after extraction must be added here in the same commit
-> that introduces or discovers it, with the input, the Rust outcome, the
-> TypeScript outcome, and the reason the difference is intentional.
+- **P1. Parenthesised groups (8 vectors).** `(number | text)`,
+  `((number))`, `(number) & !bool`: a group that is not inside an array
+  never matches here; the reference matches it as its content. `[(number)]`
+  and `search((number))` work. A real bug.
+- **P2. The empty array pattern (23 vectors).** `[]` matches only an empty
+  array here and displays as `[{0}]`; in the reference `[]` is *any* array
+  (displayed `[{0,}]`).
+- **P3. Captures of `*` inside arrays (2 vectors).** `[@any_item(*)]`
+  against `[1, "x", 3]`: the reference lists each element's path among the
+  match paths as well as the root, and `@rest((*)*)` captures the path to the
+  matched sub-sequence; here the match paths hold the root only and the
+  sequence capture holds the root.
 
 ## 2. JS-only input domain
 
-_To be documented as the surface is audited._
+- **Error taxonomy on rejected patterns (S1, 63 vectors; S2, 169 vectors).**
+  Both sides reject the same strings. The reference's parser reports the
+  token it saw (`UnexpectedToken(ParenOpen)`, `UnexpectedEndOfInput`,
+  `UnrecognizedToken` at the first character); TypeScript reports what it
+  expected (`ExpectedCloseParen`, `ExpectedColon`,
+  `InvalidCaptureGroupName`) and spans the whole offending run. Spans are
+  UTF-16 code units here; the harness transcodes.
 
 ## 3. Mapping equivalences
 
-_To be documented as the surface is audited._
+- Haystacks are built from dCBOR bytes on both sides; path elements compare
+  as their canonical encoding. Tag names resolve through the registered tags
+  on both sides (`bc_tags::register_tags()` / `registerTags(store)`), and a
+  tag-1 value formats as a date on both.
+- The display of an explicit group carries its default quantifier on both
+  sides (`(bool)` → `(bool){1}`), so displays reach a fixpoint after one
+  re-parse rather than one round; recorded, not diverged.
 
 ## Maintenance
 

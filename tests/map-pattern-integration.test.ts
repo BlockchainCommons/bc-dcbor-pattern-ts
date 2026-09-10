@@ -19,7 +19,7 @@ import {
   mapPatternWithConstraints,
   mapPatternPaths,
 } from "../src/pattern/structure/map-pattern";
-import { CborMap, cbor as createCbor, type CborInput } from "@blockchaincommons/dcbor-compat";
+import { CborMap, cbor as createCbor, type CborInput } from "@blockchaincommons/dcbor";
 import { formatPaths, type Path } from "../src/format";
 
 /**

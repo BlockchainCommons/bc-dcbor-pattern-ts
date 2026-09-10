@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { cbor } from "@blockchaincommons/dcbor-compat";
+import { cbor } from "@blockchaincommons/dcbor";
 import { parse, patternMatches } from "../src";
 
 describe("meta patterns", () => {

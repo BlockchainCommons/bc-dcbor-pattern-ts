@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { cbor } from "@blockchaincommons/dcbor-compat";
+import { cbor } from "@blockchaincommons/dcbor";
 import { parse, patternDisplay, patternMatches } from "../src";
 
 describe("infinity pattern integration", () => {

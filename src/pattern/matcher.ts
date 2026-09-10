@@ -8,7 +8,7 @@
  * @module pattern/matcher
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import type { Path } from "../format";
 import type { Instr, Program } from "./vm";
 import type { Pattern } from "./index";

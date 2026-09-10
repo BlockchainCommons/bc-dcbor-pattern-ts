@@ -8,7 +8,7 @@
  * @module parse/meta/primary-parser
  */
 
-import { CborDate } from "@blockchaincommons/dcbor-compat";
+import { CborDate } from "@blockchaincommons/dcbor";
 import { Digest } from "@blockchaincommons/components";
 import type { Lexer } from "../token";
 import type { Pattern } from "../../pattern";
@@ -63,6 +63,7 @@ import {
   digestPatternBinaryRegex,
 } from "../../pattern/value/digest-pattern";
 import type { Span } from "../../error";
+import { UR, decodeURWith } from "@blockchaincommons/uniform-resources";
 
 /**
  * Parse a primary pattern - the most basic unit of pattern matching.
@@ -467,7 +468,7 @@ const parseDigestQuotedContent = (content: string, span: Span): Result<Pattern> 
   // (1) UR string: `ur:digest/...`.
   if (content.startsWith("ur:")) {
     try {
-      const digest = Digest.fromURString(content);
+      const digest = decodeURWith(UR.parse(content), Digest.codec);
       return Ok({
         kind: "Value",
         pattern: { type: "Digest", pattern: digestPatternValue(digest) },

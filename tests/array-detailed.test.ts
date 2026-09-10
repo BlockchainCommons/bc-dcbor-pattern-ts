@@ -2,6 +2,7 @@
  * Array detailed tests ported from array_detailed_tests.rs
  */
 
+import { asArray } from "@blockchaincommons/dcbor";
 import { describe, it, expect } from "vitest";
 import {
   cbor,
@@ -50,7 +51,7 @@ describe("array detailed tests", () => {
   it("test_array_element_traversal", () => {
     const cborData = cbor([42]);
 
-    const arr = cborData.asArray();
+    const arr = asArray(cborData);
     expect(arr).toBeDefined();
     if (!arr) return;
     expect(arr.length).toBe(1);

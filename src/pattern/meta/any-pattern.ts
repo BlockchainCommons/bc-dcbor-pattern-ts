@@ -9,7 +9,7 @@
  * @module pattern/meta/any-pattern
  */
 
-import type { Cbor } from "@blockchaincommons/dcbor-compat";
+import type { Cbor } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
 
 /**

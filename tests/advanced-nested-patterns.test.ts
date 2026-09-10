@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { cbor, toTaggedValue } from "@blockchaincommons/dcbor-compat";
+import { cbor, taggedValue } from "@blockchaincommons/dcbor";
 import { parse, matches, getPaths, formatPathsStr, assertActualExpected } from "./common";
 
 describe("advanced nested patterns", () => {
@@ -11,7 +11,7 @@ describe("advanced nested patterns", () => {
     const pattern = parse(`tagged(100, ["target"])`);
 
     // Should match: 100(["target"])
-    const matchCase = toTaggedValue(100, ["target"]);
+    const matchCase = taggedValue(100, ["target"]);
     expect(matches(pattern, matchCase)).toBe(true);
 
     const paths = getPaths(pattern, matchCase);
@@ -19,13 +19,13 @@ describe("advanced nested patterns", () => {
     assertActualExpected(formatPathsStr(paths), expected);
 
     // Should not match: 100([42])
-    const noMatchCase = toTaggedValue(100, [42]);
+    const noMatchCase = taggedValue(100, [42]);
     expect(matches(pattern, noMatchCase)).toBe(false);
     const noMatchPaths = getPaths(pattern, noMatchCase);
     expect(noMatchPaths.length).toBe(0);
 
     // Should not match: 101(["target"])
-    const wrongTagCase = toTaggedValue(101, ["target"]);
+    const wrongTagCase = taggedValue(101, ["target"]);
     expect(matches(pattern, wrongTagCase)).toBe(false);
     const wrongTagPaths = getPaths(pattern, wrongTagCase);
     expect(wrongTagPaths.length).toBe(0);
@@ -35,35 +35,35 @@ describe("advanced nested patterns", () => {
     const pattern = parse(`tagged(100, [(*)*, "target", (*)*])`);
 
     // Should match: 100(["target"])
-    const case1 = toTaggedValue(100, ["target"]);
+    const case1 = taggedValue(100, ["target"]);
     expect(matches(pattern, case1)).toBe(true);
     const paths1 = getPaths(pattern, case1);
     const expected1 = `100(["target"])`;
     assertActualExpected(formatPathsStr(paths1), expected1);
 
     // Should match: 100([1, "target"])
-    const case2 = toTaggedValue(100, [1, "target"]);
+    const case2 = taggedValue(100, [1, "target"]);
     expect(matches(pattern, case2)).toBe(true);
     const paths2 = getPaths(pattern, case2);
     const expected2 = `100([1, "target"])`;
     assertActualExpected(formatPathsStr(paths2), expected2);
 
     // Should match: 100(["target", 2])
-    const case3 = toTaggedValue(100, ["target", 2]);
+    const case3 = taggedValue(100, ["target", 2]);
     expect(matches(pattern, case3)).toBe(true);
     const paths3 = getPaths(pattern, case3);
     const expected3 = `100(["target", 2])`;
     assertActualExpected(formatPathsStr(paths3), expected3);
 
     // Should match: 100([1, "target", 2])
-    const case4 = toTaggedValue(100, [1, "target", 2]);
+    const case4 = taggedValue(100, [1, "target", 2]);
     expect(matches(pattern, case4)).toBe(true);
     const paths4 = getPaths(pattern, case4);
     const expected4 = `100([1, "target", 2])`;
     assertActualExpected(formatPathsStr(paths4), expected4);
 
     // Should not match: 100([1, 2])
-    const noMatch = toTaggedValue(100, [1, 2]);
+    const noMatch = taggedValue(100, [1, 2]);
     expect(matches(pattern, noMatch)).toBe(false);
     const noMatchPaths = getPaths(pattern, noMatch);
     expect(noMatchPaths.length).toBe(0);
@@ -136,14 +136,14 @@ describe("advanced nested patterns", () => {
     const pattern = parse(`tagged(200, {"data": [{"value": number}]})`);
 
     // Should match: 200({"data": [{"value": 42}]})
-    const case1 = toTaggedValue(200, { data: [{ value: 42 }] });
+    const case1 = taggedValue(200, { data: [{ value: 42 }] });
     expect(matches(pattern, case1)).toBe(true);
     const paths1 = getPaths(pattern, case1);
     const expected1 = `200({"data": [{"value": 42}]})`;
     assertActualExpected(formatPathsStr(paths1), expected1);
 
     // Should not match: 200({"data": [{"name": "test"}]})
-    const noMatch = toTaggedValue(200, { data: [{ name: "test" }] });
+    const noMatch = taggedValue(200, { data: [{ name: "test" }] });
     expect(matches(pattern, noMatch)).toBe(false);
   });
 
@@ -152,28 +152,28 @@ describe("advanced nested patterns", () => {
     const pattern = parse(`tagged(200, {"data": [({"value": number})*]})`);
 
     // Should match: 200({"data": []}) - zero maps
-    const case0 = toTaggedValue(200, { data: [] });
+    const case0 = taggedValue(200, { data: [] });
     expect(matches(pattern, case0)).toBe(true);
     const paths0 = getPaths(pattern, case0);
     const expected0 = `200({"data": []})`;
     assertActualExpected(formatPathsStr(paths0), expected0);
 
     // Should match: 200({"data": [{"value": 42}]}) - one map
-    const case1 = toTaggedValue(200, { data: [{ value: 42 }] });
+    const case1 = taggedValue(200, { data: [{ value: 42 }] });
     expect(matches(pattern, case1)).toBe(true);
     const paths1 = getPaths(pattern, case1);
     const expected1 = `200({"data": [{"value": 42}]})`;
     assertActualExpected(formatPathsStr(paths1), expected1);
 
     // Should match: 200({"data": [{"value": 1}, {"value": 2}]}) - multiple maps
-    const case2 = toTaggedValue(200, { data: [{ value: 1 }, { value: 2 }] });
+    const case2 = taggedValue(200, { data: [{ value: 1 }, { value: 2 }] });
     expect(matches(pattern, case2)).toBe(true);
     const paths2 = getPaths(pattern, case2);
     const expected2 = `200({"data": [{"value": 1}, {"value": 2}]})`;
     assertActualExpected(formatPathsStr(paths2), expected2);
 
     // Should not match: 200({"data": [{"value": 1}, {"name": "test"}]}) - mixed valid/invalid
-    const noMatch = toTaggedValue(200, { data: [{ value: 1 }, { name: "test" }] });
+    const noMatch = taggedValue(200, { data: [{ value: 1 }, { name: "test" }] });
     expect(matches(pattern, noMatch)).toBe(false);
   });
 
@@ -181,7 +181,7 @@ describe("advanced nested patterns", () => {
     const pattern = parse(`tagged(300, [{*: *}, (*)*])`);
 
     // Should match: 300([{"key": "value"}])
-    const case1 = toTaggedValue(300, [{ key: "value" }]);
+    const case1 = taggedValue(300, [{ key: "value" }]);
     expect(matches(pattern, case1)).toBe(true);
     const paths1 = getPaths(pattern, case1);
     const expected1 = `300([{"key": "value"}])`;
@@ -190,14 +190,14 @@ describe("advanced nested patterns", () => {
     // Should match: 300([{42: true}, "extra", 123])
     // Note: We need to use CborMap for non-string keys
     // For this test, we'll use a simpler approach with string keys
-    const case2Alt = toTaggedValue(300, [{ "42": true }, "extra", 123]);
+    const case2Alt = taggedValue(300, [{ "42": true }, "extra", 123]);
     expect(matches(pattern, case2Alt)).toBe(true);
     const paths2 = getPaths(pattern, case2Alt);
     const expected2 = `300([{"42": true}, "extra", 123])`;
     assertActualExpected(formatPathsStr(paths2), expected2);
 
     // Should not match: 300(["string"])
-    const noMatch = toTaggedValue(300, ["string"]);
+    const noMatch = taggedValue(300, ["string"]);
     expect(matches(pattern, noMatch)).toBe(false);
   });
 
@@ -205,7 +205,7 @@ describe("advanced nested patterns", () => {
     // Test deeply nested structures for performance
     const pattern = parse(`tagged(400, {"level1": {"level2": {"level3": [42]}}})`);
 
-    const deepStructure = toTaggedValue(400, {
+    const deepStructure = taggedValue(400, {
       level1: { level2: { level3: [42] } },
     });
     expect(matches(pattern, deepStructure)).toBe(true);
@@ -213,7 +213,7 @@ describe("advanced nested patterns", () => {
     const expected = `400({"level1": {"level2": {"level3": [42]}}})`;
     assertActualExpected(formatPathsStr(paths), expected);
 
-    const wrongStructure = toTaggedValue(400, {
+    const wrongStructure = taggedValue(400, {
       level1: { level2: { level3: [43] } },
     });
     expect(matches(pattern, wrongStructure)).toBe(false);
@@ -226,32 +226,28 @@ describe("advanced nested patterns", () => {
     );
 
     // Minimum valid structure
-    const case1 = toTaggedValue(500, [{ type: "user" }, { id: 123 }]);
+    const case1 = taggedValue(500, [{ type: "user" }, { id: 123 }]);
     expect(matches(pattern, case1)).toBe(true);
     const paths1 = getPaths(pattern, case1);
     const expected1 = `500([{"type": "user"}, {"id": 123}])`;
     assertActualExpected(formatPathsStr(paths1), expected1);
 
     // With optional name map
-    const case2 = toTaggedValue(500, [{ type: "user" }, { id: 123 }, { name: "John" }]);
+    const case2 = taggedValue(500, [{ type: "user" }, { id: 123 }, { name: "John" }]);
     expect(matches(pattern, case2)).toBe(true);
     const paths2 = getPaths(pattern, case2);
     const expected2 = `500([{"type": "user"}, {"id": 123}, {"name": "John"}])`;
     assertActualExpected(formatPathsStr(paths2), expected2);
 
     // With optional email map
-    const case3 = toTaggedValue(500, [
-      { type: "user" },
-      { id: 123 },
-      { email: "john@example.com" },
-    ]);
+    const case3 = taggedValue(500, [{ type: "user" }, { id: 123 }, { email: "john@example.com" }]);
     expect(matches(pattern, case3)).toBe(true);
     const paths3 = getPaths(pattern, case3);
     const expected3 = `500([{"type": "user"}, {"id": 123}, {"email": "john@example.com"}])`;
     assertActualExpected(formatPathsStr(paths3), expected3);
 
     // With multiple optional maps
-    const case4 = toTaggedValue(500, [
+    const case4 = taggedValue(500, [
       { type: "user" },
       { id: 123 },
       { name: "John" },

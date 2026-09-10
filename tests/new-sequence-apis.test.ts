@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { cbor, toTaggedValue } from "@blockchaincommons/dcbor-compat";
+import { cbor, taggedValue } from "@blockchaincommons/dcbor";
 import {
   sequence,
   text,
@@ -54,7 +54,7 @@ describe("new sequence APIs", () => {
     // Test that they work with real CBOR data
     const arrayCbor = cbor([1, 2, 3]);
     const mapCbor = cbor({ key: "value" });
-    const taggedCbor = toTaggedValue(42, cbor("content"));
+    const taggedCbor = taggedValue(42, cbor("content"));
 
     // Test array pattern paths
     const arrayPaths = patternPaths(arrayPattern, arrayCbor);

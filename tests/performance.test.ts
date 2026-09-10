@@ -6,6 +6,7 @@
  * (rather than no checks) to catch genuine regressions.
  */
 
+import { taggedValue } from "@blockchaincommons/dcbor";
 import { describe, it, expect } from "vitest";
 import { performance } from "node:perf_hooks";
 import { cbor, parse, matches, getPaths, formatPathsStr, assertActualExpected } from "./common";
@@ -20,10 +21,7 @@ describe("performance tests", () => {
     const patternCreationTime = performance.now() - patternStart;
 
     // Create matching deeply nested data
-    const data = cbor({
-      tag: 100,
-      value: cbor({ a: { b: { c: { d: [42] } } } }),
-    });
+    const data = taggedValue(100, cbor({ a: { b: { c: { d: [42] } } } }));
 
     // Test matching performance
     const matchStart = performance.now();
@@ -167,13 +165,10 @@ describe("performance tests", () => {
 
     // Test multiple matches to ensure VM optimization is effective
     const testCases: ReturnType<typeof cbor>[] = [
-      cbor({ tag: 100, value: cbor(["separator"]) }),
-      cbor({ tag: 100, value: cbor([{ key: 1 }, "separator"]) }),
-      cbor({ tag: 100, value: cbor(["separator", { value: "test" }]) }),
-      cbor({
-        tag: 100,
-        value: cbor([{ key: 1 }, { key: 2 }, "separator", { value: "a" }, { value: "b" }]),
-      }),
+      taggedValue(100, cbor(["separator"])),
+      taggedValue(100, cbor([{ key: 1 }, "separator"])),
+      taggedValue(100, cbor(["separator", { value: "test" }])),
+      taggedValue(100, cbor([{ key: 1 }, { key: 2 }, "separator", { value: "a" }, { value: "b" }])),
     ];
 
     const totalStart = performance.now();
