@@ -1,0 +1,50 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`dcbor-pattern properties > a capture-free pattern yields the same paths with and without captures 1`] = `[]`;
+
+exports[`dcbor-pattern properties > captures only hold paths that start at the root 1`] = `
+[
+  "(@a(number)) on 8103: @a 03",
+  "(@a(number) | @b(text))* on 83010203: @a 01",
+  "(@a(number) | @b(text))* on 83010203: @a 02",
+  "(@a(number) | @b(text))* on 83010203: @a 03",
+  "(@a(number) | @b(text))* on 83010101: @a 01",
+  "(@a(number) | @b(text))* on 83010101: @a 01",
+  "(@a(number) | @b(text))* on 83010101: @a 01",
+  "(@a(number) | @b(text))* on 8103: @a 03",
+  "(@a(number) | @b(text))* on 8301182a03: @a 01",
+  "(@a(number) | @b(text))* on 8301182a03: @a 182a",
+  "(@a(number) | @b(text))* on 8301182a03: @a 03",
+  "[@x(search(1))] on 83010203: @x 01",
+  "[@x(search(1))] on 83010101: @x 01",
+  "[@x(search(1))] on 8301182a03: @x 01",
+]
+`;
+
+exports[`dcbor-pattern properties > every path starts at the root and descends the haystack 1`] = `[]`;
+
+exports[`dcbor-pattern properties > matches agrees with pathsWithCaptures 1`] = `
+[
+  "[(@a(number))*] on 80: matches true, pathsWithCaptures false",
+  "[(@a(1))+] on 83010101: matches true, pathsWithCaptures false",
+  "[(@a(1))+] on 820101: matches true, pathsWithCaptures false",
+  "[(@a(1))+] on 8101: matches true, pathsWithCaptures false",
+]
+`;
+
+exports[`dcbor-pattern properties > no path is reported twice 1`] = `
+[
+  "@a(*) | @a(number) on 182a",
+  "@a(*) | @a(number) on 20",
+  "@a(*) | @a(number) on f93e00",
+  "@a(*) | @a(number) on f97e00",
+  "@a(*) | @a(number) on f97c00",
+  "@a(*) | @a(number) on 1b0020000000000000",
+  "@a(*) | @a(number) on 1b1000000000000000",
+  "@a(*) | @a(number) on fa5f800000",
+  "@a(*) | @a(number) on 3b001fffffffffffff",
+  "@a(*) | @a(number) on 3bffffffffffffffff",
+  "@a(*) | @a(number) on 01",
+  "@a(*) | @a(number) on 02",
+]
+`;

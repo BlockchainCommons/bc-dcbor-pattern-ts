@@ -1,0 +1,41 @@
+[
+  {
+    "name": "ESM entry (import *), minified + gzipped",
+    "path": "dist/index.mjs",
+    "limit": "19 kB",
+    "ignore": [
+      "@blockchaincommons/components",
+      "@blockchaincommons/dcbor",
+      "@blockchaincommons/dcbor-parse",
+      "@blockchaincommons/known-values",
+      "@blockchaincommons/tags",
+      "@blockchaincommons/uniform-resources"
+    ]
+  },
+  {
+    "name": "format subpath, minified + gzipped",
+    "path": "dist/format.mjs",
+    "limit": "1 kB",
+    "ignore": [
+      "@blockchaincommons/components",
+      "@blockchaincommons/dcbor",
+      "@blockchaincommons/dcbor-parse",
+      "@blockchaincommons/known-values",
+      "@blockchaincommons/tags",
+      "@blockchaincommons/uniform-resources"
+    ]
+  },
+  {
+    "name": "patterns subpath, minified + gzipped",
+    "path": "dist/patterns.mjs",
+    "limit": "13 kB",
+    "ignore": [
+      "@blockchaincommons/components",
+      "@blockchaincommons/dcbor",
+      "@blockchaincommons/dcbor-parse",
+      "@blockchaincommons/known-values",
+      "@blockchaincommons/tags",
+      "@blockchaincommons/uniform-resources"
+    ]
+  }
+]
