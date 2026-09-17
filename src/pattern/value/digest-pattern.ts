@@ -7,8 +7,8 @@ import type { Cbor } from "@blockchaincommons/dcbor";
 import { tagValue, isTagged, asBytes, bytesToHex, asTaggedValue } from "@blockchaincommons/dcbor";
 import type { Digest } from "@blockchaincommons/components";
 import type { Path } from "../../format";
-import { bytesEqual, bytesStartsWith, bytesToLatin1 } from "./bytes-utils";
-import { type PatternRegex, type RegexInput, toPatternRegex } from "../../regex";
+import { bytesEqual, bytesStartsWith } from "./bytes-utils";
+import { type PatternRegex, type RegexInput, byteRegexTest, toPatternRegex } from "../../regex";
 
 /**
  * A pattern over digests: any, an exact digest, a byte prefix, or a regex
@@ -98,7 +98,7 @@ export const digestPatternMatches = (pattern: DigestPattern, haystack: Cbor): bo
     case "Prefix":
       return bytesStartsWith(digestBytes, pattern.prefix);
     case "BinaryRegex":
-      return pattern.regex.regex.test(bytesToLatin1(digestBytes));
+      return byteRegexTest(pattern.regex, digestBytes);
   }
 };
 

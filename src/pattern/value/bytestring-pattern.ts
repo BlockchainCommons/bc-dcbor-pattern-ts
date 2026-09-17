@@ -5,8 +5,8 @@
 import type { Cbor } from "@blockchaincommons/dcbor";
 import { asBytes, bytesToHex } from "@blockchaincommons/dcbor";
 import type { Path } from "../../format";
-import { bytesEqual, bytesToLatin1 } from "./bytes-utils";
-import { type PatternRegex, type RegexInput, toPatternRegex } from "../../regex";
+import { bytesEqual } from "./bytes-utils";
+import { type PatternRegex, type RegexInput, byteRegexTest, toPatternRegex } from "../../regex";
 
 /**
  * A pattern over byte strings: any, exact bytes, or a regex run over the
@@ -69,7 +69,7 @@ export const byteStringPatternMatches = (pattern: ByteStringPattern, haystack: C
     case "Value":
       return bytesEqual(value, pattern.value);
     case "BinaryRegex":
-      return pattern.regex.regex.test(bytesToLatin1(value));
+      return byteRegexTest(pattern.regex, value);
   }
 };
 

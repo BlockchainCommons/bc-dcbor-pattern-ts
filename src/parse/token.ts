@@ -1,13 +1,19 @@
 /**
- * The lexer: pattern text into tokens with their spans. A token the language
- * has no reading for throws `DcborPatternError`.
+ * The lexer: pattern text into tokens with their spans. A literal that
+ * matched its opening but not its grammar is still a token: it carries the
+ * error, which the parser reports when it consumes the token. Only text no
+ * token starts throws, with the span a single-pass scanner reads before
+ * giving up.
  */
-import { tryParseDcborPrefix } from "@blockchaincommons/dcbor-parse";
+import { tryParseDcborItemPartial } from "@blockchaincommons/dcbor-parse";
 import { asNumber } from "@blockchaincommons/dcbor";
-import { type Span, span, DcborPatternError } from "../error";
+import { type DcborResult, type Span, span, DcborPatternError } from "../error";
 import { Quantifier } from "../quantifier";
 import { Reluctance } from "../reluctance";
 import { compilePatternRegex } from "../regex";
+
+/** A literal's decoded value, or the error the parser reports for it. */
+export type Literal<T> = DcborResult<T, DcborPatternError>;
 
 /** A token of the pattern language. */
 export type Token =
@@ -53,16 +59,16 @@ export type Token =
   | { readonly type: "LessThanOrEqual" }
   | { readonly type: "GreaterThan" }
   | { readonly type: "LessThan" }
-  | { readonly type: "NumberLiteral"; readonly value: number }
+  | { readonly type: "NumberLiteral"; readonly value: Literal<number> }
   | { readonly type: "GroupName"; readonly name: string }
-  | { readonly type: "StringLiteral"; readonly value: string }
-  | { readonly type: "SingleQuoted"; readonly value: string }
-  | { readonly type: "Regex"; readonly pattern: string }
-  | { readonly type: "HexString"; readonly value: Uint8Array }
-  | { readonly type: "HexRegex"; readonly pattern: string }
-  | { readonly type: "DateQuoted"; readonly value: string }
-  | { readonly type: "DigestQuoted"; readonly value: string }
-  | { readonly type: "Range"; readonly quantifier: Quantifier };
+  | { readonly type: "StringLiteral"; readonly value: Literal<string> }
+  | { readonly type: "SingleQuoted"; readonly value: Literal<string> }
+  | { readonly type: "Regex"; readonly pattern: Literal<string> }
+  | { readonly type: "HexString"; readonly value: Literal<Uint8Array> }
+  | { readonly type: "HexRegex"; readonly pattern: Literal<string> }
+  | { readonly type: "DateQuoted"; readonly value: Literal<string> }
+  | { readonly type: "DigestQuoted"; readonly value: Literal<string> }
+  | { readonly type: "Range"; readonly quantifier: Literal<Quantifier> };
 
 /** A token with its span in the source. */
 export interface SpannedToken {
@@ -70,6 +76,10 @@ export interface SpannedToken {
   readonly span: Span;
 }
 
+const ok = <T>(value: T): Literal<T> => ({ ok: true, value });
+const err = <T>(error: DcborPatternError): Literal<T> => ({ ok: false, error });
+
+/** The keywords, by their text. */
 const KEYWORDS: Readonly<Record<string, Token>> = {
   tagged: { type: "Tagged" },
   array: { type: "Array" },
@@ -87,7 +97,19 @@ const KEYWORDS: Readonly<Record<string, Token>> = {
   false: { type: "BoolFalse" },
   NaN: { type: "NaN" },
   Infinity: { type: "Infinity" },
+  "-Infinity": { type: "NegInfinity" },
+  "...": { type: "Ellipsis" },
 };
+
+/**
+ * Every word-like token text, longest first: the keywords and the openers of
+ * the quoted literals. The lexer takes the longest one the text starts with;
+ * text that starts like one of them but completes none is unrecognised over
+ * the part it shares with them, as a single-pass scanner reads it.
+ */
+const WORDS: readonly string[] = [...Object.keys(KEYWORDS), "date'", "digest'", "h'", "h'/"].sort(
+  (a, b) => b.length - a.length,
+);
 
 const isWhitespace = (ch: string): boolean =>
   ch === " " || ch === "\t" || ch === "\r" || ch === "\n" || ch === "\f";
@@ -98,14 +120,11 @@ const isIdentStart = (ch: string): boolean =>
   (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || ch === "_";
 const isIdentCont = (ch: string): boolean => isIdentStart(ch) || isDigit(ch);
 
-const hexToBytes = (hex: string): Uint8Array | undefined => {
-  if (hex.length % 2 !== 0) return undefined;
+const NUMBER_RE = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
+
+const hexToBytes = (hex: string): Uint8Array => {
   const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    const byte = parseInt(hex.slice(i, i + 2), 16);
-    if (Number.isNaN(byte)) return undefined;
-    bytes[i / 2] = byte;
-  }
+  for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
   return bytes;
 };
 
@@ -191,9 +210,10 @@ export class Lexer {
   }
 
   /**
-   * The next token, or `undefined` at the end of the source.
+   * The next token, or `undefined` at the end of the source. A literal that
+   * does not complete or decode is a token carrying its error.
    *
-   * @throws {DcborPatternError} for text no token matches, or a malformed literal
+   * @throws {DcborPatternError} `UnrecognizedToken` for text no token starts
    */
   next(): SpannedToken | undefined {
     this.skipWhitespace();
@@ -203,14 +223,6 @@ export class Lexer {
     const ch = this.peekChar() ?? "";
     const token = (t: Token): SpannedToken => ({ token: t, span: this.spanFrom(start) });
 
-    if (this.startsWith("-Infinity")) {
-      this.bump(9);
-      return token({ type: "NegInfinity" });
-    }
-    if (this.startsWith("...")) {
-      this.bump(3);
-      return token({ type: "Ellipsis" });
-    }
     for (const [text, type] of TWO_CHAR) {
       if (this.startsWith(text)) {
         this.bump(2);
@@ -237,27 +249,34 @@ export class Lexer {
     }
     if (ch === "/") {
       this.bump(1);
-      return token({ type: "Regex", pattern: this.regex(start, "text") });
+      return token({ type: "Regex", pattern: this.regex(start) });
     }
     if (ch === "@") {
       this.bump(1);
-      return token({ type: "GroupName", name: this.groupName(start) });
-    }
-    if (ch === "h" && this.peekChar(1) === "'") {
-      this.bump(2);
-      if (this.peekChar() === "/") {
-        this.bump(1);
-        return token({ type: "HexRegex", pattern: this.hexRegex(start) });
-      }
-      return token({ type: "HexString", value: this.hexString(start) });
+      if (!isIdentStart(this.peekChar() ?? "")) return this.unrecognized(start);
+      const nameStart = this._position;
+      while (isIdentCont(this.peekChar() ?? "")) this.bump(1);
+      return token({ type: "GroupName", name: this._input.slice(nameStart, this._position) });
     }
     if (isDigit(ch) || (ch === "-" && isDigit(this.peekChar(1) ?? ""))) {
-      return token({ type: "NumberLiteral", value: this.number(start) });
+      return token({ type: "NumberLiteral", value: this.number() });
     }
-    if (isIdentStart(ch)) return this.identifier(start);
 
-    this.bump(1);
-    throw DcborPatternError.unrecognizedToken(this.spanFrom(start));
+    const word = WORDS.find((w) => this.startsWith(w));
+    if (word === undefined) return this.unrecognized(start);
+    this.bump(word.length);
+    switch (word) {
+      case "h'":
+        return token({ type: "HexString", value: this.hexString(start) });
+      case "h'/":
+        return token({ type: "HexRegex", pattern: this.hexRegex(start) });
+      case "date'":
+        return token({ type: "DateQuoted", value: this.quotedBody(start, "date'") });
+      case "digest'":
+        return token({ type: "DigestQuoted", value: this.quotedBody(start, "digest'") });
+      default:
+        return token(KEYWORDS[word]);
+    }
   }
 
   /** The next token without consuming it, or `undefined` at the end; throws as `next` does. */
@@ -270,81 +289,113 @@ export class Lexer {
     }
   }
 
+  /**
+   * Throws for text no token starts. The span is what a single-pass scanner
+   * reads before giving up: the part the text shares with a keyword it
+   * started (`nul`, `-Inf`, `..`), the `@` of a capture without a name, and
+   * otherwise one code point.
+   */
+  private unrecognized(start: number): never {
+    let extent = 0;
+    for (const w of WORDS) {
+      let n = 0;
+      while (n < w.length && this._input[start + n] === w[n]) n++;
+      extent = Math.max(extent, n);
+    }
+    if (this._position > start) extent = Math.max(extent, this._position - start);
+    if (extent === 0) extent = String.fromCodePoint(this._input.codePointAt(start) ?? 0).length;
+    this._position = start + extent;
+    throw DcborPatternError.unrecognizedToken(this.spanFrom(start));
+  }
+
   /** `{`: a `{n,m}` range when digits and a comma or brace follow, else a brace. */
   private braceOpen(start: number): SpannedToken {
     const rest = this.remainder();
     let pos = 0;
     while (pos < rest.length && isWhitespace(rest[pos])) pos++;
     if (pos < rest.length && isDigit(rest[pos]) && looksLikeRange(rest.slice(pos))) {
-      return {
-        token: { type: "Range", quantifier: this.range(start) },
-        span: this.spanFrom(start),
-      };
+      const quantifier = this.range(start);
+      return { token: { type: "Range", quantifier }, span: this.spanFrom(start) };
     }
     return { token: { type: "BraceOpen" }, span: this.spanFrom(start) };
   }
 
-  private digits(): string {
-    const from = this._position;
-    while (isDigit(this.peekChar() ?? "")) this.bump(1);
-    return this._input.slice(from, this._position);
-  }
-
-  /** `{n}`, `{n,m}` or `{n,}` with an optional `?` or `+`. */
-  private range(start: number): Quantifier {
-    const invalid = (): never => {
-      throw DcborPatternError.invalidRange(this.spanFrom(start));
+  /**
+   * `{n}`, `{n,m}` or `{n,}` with an optional `?` or `+`, after the `{`. A
+   * range that does not read is `InvalidRange` over the `{` and leaves the
+   * rest unread; inverted bounds are `InvalidRange` over the whole range.
+   */
+  private range(start: number): Literal<Quantifier> {
+    const src = this.remainder();
+    const invalid = (): Literal<Quantifier> =>
+      err(DcborPatternError.invalidRange(this.spanFrom(start)));
+    let pos = 0;
+    const skipWs = (): void => {
+      while (pos < src.length && isWhitespace(src[pos])) pos++;
     };
-    this.skipWhitespace();
-    const minText = this.digits();
-    if (minText === "") invalid();
-    const min = parseInt(minText, 10);
-    if (min > Number.MAX_SAFE_INTEGER) invalid();
-    this.skipWhitespace();
+    const digits = (): string => {
+      const from = pos;
+      while (pos < src.length && isDigit(src[pos])) pos++;
+      return src.slice(from, pos);
+    };
+    skipWs();
+    const minText = digits();
+    if (minText === "") return invalid();
+    const min = Number(minText);
+    if (min > Number.MAX_SAFE_INTEGER) return invalid();
+    skipWs();
 
     let max: number | undefined;
-    if (this.peekChar() === ",") {
-      this.bump(1);
-      this.skipWhitespace();
-      if (this.peekChar() === "}") {
-        this.bump(1);
+    if (src[pos] === ",") {
+      pos++;
+      skipWs();
+      if (src[pos] === "}") {
+        pos++;
         max = undefined;
-      } else if (isDigit(this.peekChar() ?? "")) {
-        max = parseInt(this.digits(), 10);
-        if (max > Number.MAX_SAFE_INTEGER) invalid();
-        this.skipWhitespace();
-        if (this.peekChar() !== "}") invalid();
-        this.bump(1);
+      } else if (isDigit(src[pos] ?? "")) {
+        max = Number(digits());
+        if (max > Number.MAX_SAFE_INTEGER) return invalid();
+        skipWs();
+        if (src[pos] !== "}") return invalid();
+        pos++;
       } else {
-        invalid();
+        return invalid();
       }
-    } else if (this.peekChar() === "}") {
-      this.bump(1);
+    } else if (src[pos] === "}") {
+      pos++;
       max = min;
     } else {
-      invalid();
+      return invalid();
     }
 
     let reluctance: Reluctance = Reluctance.Greedy;
-    if (this.peekChar() === "?") {
-      this.bump(1);
+    if (src[pos] === "?") {
+      pos++;
       reluctance = Reluctance.Lazy;
-    } else if (this.peekChar() === "+") {
-      this.bump(1);
+    } else if (src[pos] === "+") {
+      pos++;
       reluctance = Reluctance.Possessive;
     }
-    if (max !== undefined && min > max) invalid();
-    return max !== undefined
-      ? Quantifier.between(min, max, reluctance)
-      : Quantifier.atLeast(min, reluctance);
+    this.bump(pos);
+    if (max !== undefined && min > max) return invalid();
+    return ok(
+      max !== undefined
+        ? Quantifier.between(min, max, reluctance)
+        : Quantifier.atLeast(min, reluctance),
+    );
   }
 
-  /** A string literal after its opening quote; `\"`, `\\`, `\n`, `\r`, `\t` are escapes. */
-  private quoted(start: number, quote: string): string {
+  /**
+   * A string literal after its opening quote; `\"`, `\\`, `\n`, `\r`, `\t`
+   * are escapes. Without a closing quote it is `UnterminatedString` over the
+   * opening quote, and the text after it is left unread.
+   */
+  private quoted(start: number, quote: string): Literal<string> {
     let result = "";
     let escape = false;
-    while (this._position < this._input.length) {
-      const ch = this._input[this._position++];
+    let pos = this._position;
+    while (pos < this._input.length) {
+      const ch = this._input[pos++];
       if (escape) {
         switch (ch) {
           case quote:
@@ -367,175 +418,118 @@ export class Lexer {
       } else if (ch === "\\") {
         escape = true;
       } else if (ch === quote) {
-        return result;
+        this._position = pos;
+        return ok(result);
       } else {
         result += ch;
       }
     }
-    throw DcborPatternError.unterminatedString(this.spanFrom(start));
+    return err(DcborPatternError.unterminatedString(this.spanFrom(start)));
   }
 
-  /** A regex literal after its opening slash, checked against the dialect. */
-  private regex(start: number, mode: "text" | "bytes"): string {
-    let pattern = "";
+  /**
+   * A regex literal after its opening slash, checked against the dialect
+   * once closed: `InvalidRegex` spans the whole literal. Without a closing
+   * slash it is `UnterminatedRegex` over the opening slash.
+   */
+  private regex(start: number): Literal<string> {
+    const close = this.scanRegex(this._position);
+    if (close === undefined) return err(DcborPatternError.unterminatedRegex(this.spanFrom(start)));
+    const pattern = this._input.slice(this._position, close);
+    this._position = close + 1;
+    return this.checkedRegex(pattern, "text", start);
+  }
+
+  /** `h'/…/'` after `h'/`: a byte regex; unterminated over the `h'/`. */
+  private hexRegex(start: number): Literal<string> {
+    let from = this._position;
+    for (;;) {
+      const close = this.scanRegex(from);
+      if (close === undefined) break;
+      if (this._input[close + 1] === "'") {
+        const pattern = this._input.slice(this._position, close);
+        this._position = close + 2;
+        return this.checkedRegex(pattern, "bytes", start);
+      }
+      from = close + 1;
+    }
+    return err(DcborPatternError.unterminatedRegex(this.spanFrom(start)));
+  }
+
+  /** The offset of the next unescaped `/` at or after `from`, or `undefined`. */
+  private scanRegex(from: number): number | undefined {
     let escape = false;
-    while (this._position < this._input.length) {
-      const ch = this._input[this._position++];
-      if (escape) {
-        pattern += ch;
-        escape = false;
-      } else if (ch === "\\") {
-        pattern += ch;
-        escape = true;
-      } else if (ch === "/") {
-        try {
-          compilePatternRegex(pattern, mode);
-        } catch {
-          throw DcborPatternError.invalidRegex(this.spanFrom(start));
-        }
-        return pattern;
-      } else {
-        pattern += ch;
-      }
+    for (let pos = from; pos < this._input.length; pos++) {
+      const ch = this._input[pos];
+      if (escape) escape = false;
+      else if (ch === "\\") escape = true;
+      else if (ch === "/") return pos;
     }
-    throw DcborPatternError.unterminatedRegex(this.spanFrom(start));
+    return undefined;
   }
 
-  /** `@name`: an identifier. */
-  private groupName(start: number): string {
-    const nameStart = this._position;
-    if (!isIdentStart(this.peekChar() ?? "")) {
-      throw DcborPatternError.invalidCaptureGroupName("", this.spanFrom(start));
+  private checkedRegex(pattern: string, mode: "text" | "bytes", start: number): Literal<string> {
+    try {
+      compilePatternRegex(pattern, mode);
+      return ok(pattern);
+    } catch {
+      return err(DcborPatternError.invalidRegex(this.spanFrom(start)));
     }
-    while (isIdentCont(this.peekChar() ?? "")) this.bump(1);
-    return this._input.slice(nameStart, this._position);
   }
 
-  /** `h'…'` after `h'`: even-length hex. */
-  private hexString(start: number): Uint8Array {
-    let hex = "";
-    while (this._position < this._input.length) {
-      const ch = this.peekChar() ?? "";
+  /**
+   * `h'…'` after `h'`: even-length hex. A body that is not hex, or has an
+   * odd number of digits, is `InvalidHexString` over the `h'`, with the body
+   * left unread; without a closing quote it is `UnterminatedHexString`.
+   */
+  private hexString(start: number): Literal<Uint8Array> {
+    for (let pos = this._position; pos < this._input.length; pos++) {
+      const ch = this._input[pos];
       if (ch === "'") {
-        this.bump(1);
-        const bytes = hexToBytes(hex);
-        if (bytes === undefined) throw DcborPatternError.invalidHexString(this.spanFrom(start));
-        return bytes;
-      }
-      if (!isHexDigit(ch)) throw DcborPatternError.invalidHexString(this.spanFrom(start));
-      hex += ch;
-      this.bump(1);
-    }
-    throw DcborPatternError.unterminatedHexString(this.spanFrom(start));
-  }
-
-  /** `h'/…/'` after `h'/`: a byte regex, checked against the dialect. */
-  private hexRegex(start: number): string {
-    let pattern = "";
-    let escape = false;
-    while (this._position < this._input.length) {
-      const ch = this._input[this._position++];
-      if (escape) {
-        pattern += ch;
-        escape = false;
-      } else if (ch === "\\") {
-        pattern += ch;
-        escape = true;
-      } else if (ch === "/" && this.peekChar() === "'") {
-        this.bump(1);
-        try {
-          compilePatternRegex(pattern, "bytes");
-        } catch {
-          throw DcborPatternError.invalidRegex(this.spanFrom(start));
+        const hex = this._input.slice(this._position, pos);
+        if (hex.length % 2 !== 0) {
+          return err(DcborPatternError.invalidHexString(this.spanFrom(start)));
         }
-        return pattern;
-      } else {
-        pattern += ch;
+        this._position = pos + 1;
+        return ok(hexToBytes(hex));
       }
+      if (!isHexDigit(ch)) return err(DcborPatternError.invalidHexString(this.spanFrom(start)));
     }
-    throw DcborPatternError.unterminatedRegex(this.spanFrom(start));
+    return err(DcborPatternError.unterminatedHexString(this.spanFrom(start)));
   }
 
-  /** A number literal, read as dCBOR reads it. */
-  private number(start: number): number {
-    const invalid = (): never => {
-      throw DcborPatternError.invalidNumberFormat(this.spanFrom(start));
-    };
-    if (this.peekChar() === "-") this.bump(1);
-    if (this.peekChar() === "0") this.bump(1);
-    else if (isDigit(this.peekChar() ?? "")) this.digits();
-    else invalid();
-    if (this.peekChar() === "." && this.peekChar(1) !== ".") {
-      this.bump(1);
-      if (!isDigit(this.peekChar() ?? "")) invalid();
-      this.digits();
+  /**
+   * The body of `date'…'` or `digest'…'` after the opener, up to the closing
+   * quote; without one it is unterminated over the opener.
+   */
+  private quotedBody(start: number, opener: "date'" | "digest'"): Literal<string> {
+    const close = this._input.indexOf("'", this._position);
+    if (close < 0) {
+      const range = this.spanFrom(start);
+      return err(
+        opener === "date'"
+          ? DcborPatternError.unterminatedDateQuoted(range)
+          : DcborPatternError.unterminatedDigestQuoted(range),
+      );
     }
-    if (this.peekChar() === "e" || this.peekChar() === "E") {
-      this.bump(1);
-      if (this.peekChar() === "+" || this.peekChar() === "-") this.bump(1);
-      if (!isDigit(this.peekChar() ?? "")) invalid();
-      this.digits();
-    }
-    const parsed = tryParseDcborPrefix(this._input.slice(start, this._position));
-    if (!parsed.ok) return invalid();
-    const numValue = asNumber(parsed.value.value);
-    if (numValue === undefined) return invalid();
-    const value = typeof numValue === "bigint" ? Number(numValue) : numValue;
-    if (!Number.isFinite(value)) return invalid();
-    return value;
+    const body = this._input.slice(this._position, close);
+    this._position = close + 1;
+    return ok(body);
   }
 
-  /** A keyword, or `date'…'` / `digest'…'`. */
-  private identifier(start: number): SpannedToken {
-    const identStart = this._position;
-    while (isIdentCont(this.peekChar() ?? "")) this.bump(1);
-    const ident = this._input.slice(identStart, this._position);
-
-    if (ident === "date" && this.peekChar() === "'") {
-      this.bump(1);
-      return {
-        token: { type: "DateQuoted", value: this.dateQuoted(start) },
-        span: this.spanFrom(start),
-      };
+  /** A number literal, read as dCBOR reads it; `1e400` reads as infinity. */
+  private number(): Literal<number> {
+    NUMBER_RE.lastIndex = this._position;
+    const match = NUMBER_RE.exec(this._input);
+    const text = match === null ? "" : match[0];
+    const start = this._position;
+    this._position += text.length;
+    const parsed = tryParseDcborItemPartial(text);
+    const value = parsed.ok ? asNumber(parsed.value.value) : undefined;
+    if (value === undefined) {
+      return err(DcborPatternError.invalidNumberFormat(this.spanFrom(start)));
     }
-    if (ident === "digest" && this.peekChar() === "'") {
-      this.bump(1);
-      return {
-        token: { type: "DigestQuoted", value: this.digestQuoted(start) },
-        span: this.spanFrom(start),
-      };
-    }
-    const keyword = KEYWORDS[ident];
-    if (keyword !== undefined) return { token: keyword, span: this.spanFrom(start) };
-    throw DcborPatternError.unrecognizedToken(this.spanFrom(start));
-  }
-
-  private dateQuoted(start: number): string {
-    let content = "";
-    while (this._position < this._input.length) {
-      const ch = this._input[this._position++];
-      if (ch === "'") {
-        if (content.length === 0) throw DcborPatternError.invalidDateFormat(this.spanFrom(start));
-        return content;
-      }
-      content += ch;
-    }
-    throw DcborPatternError.unterminatedDateQuoted(this.spanFrom(start));
-  }
-
-  private digestQuoted(start: number): string {
-    let content = "";
-    while (this._position < this._input.length) {
-      const ch = this._input[this._position++];
-      if (ch === "'") {
-        if (content.length === 0) {
-          throw DcborPatternError.invalidDigestPattern("empty content", this.spanFrom(start));
-        }
-        return content;
-      }
-      content += ch;
-    }
-    throw DcborPatternError.unterminatedDigestQuoted(this.spanFrom(start));
+    return ok(typeof value === "bigint" ? Number(value) : value);
   }
 }
 

@@ -3,12 +3,12 @@
  * > primary, with groups, captures, `search`, arrays, maps and tagged values.
  */
 import { CborDate, Tag } from "@blockchaincommons/dcbor";
-import { parseDcbor } from "@blockchaincommons/dcbor-parse";
+import { parseDcborItem } from "@blockchaincommons/dcbor-parse";
 import { Digest } from "@blockchaincommons/components";
 import { KnownValue } from "@blockchaincommons/known-values";
 import { UR, decodeURWith } from "@blockchaincommons/uniform-resources";
 import { type Span, span as makeSpan, DcborPatternError } from "../error";
-import { Lexer, type SpannedToken, type Token } from "./token";
+import { Lexer, type Literal, type SpannedToken, type Token } from "./token";
 import type { Pattern } from "../pattern";
 import {
   any,
@@ -23,7 +23,7 @@ import {
   anyTagged,
   anyText,
   and,
-  boolean,
+  bool,
   byteString,
   byteStringRegex,
   capture,
@@ -38,7 +38,7 @@ import {
   knownValue,
   knownValueNamed,
   knownValueRegex,
-  not,
+  notMatching,
   nullValue,
   number,
   numberGreaterThan,
@@ -48,7 +48,6 @@ import {
   numberLessThanOrEqual,
   numberNaN,
   numberNegInfinity,
-  numberRange,
   or,
   repeat,
   search,
@@ -56,7 +55,8 @@ import {
   text,
   textRegex,
 } from "../pattern/constructors";
-import { structurePattern } from "../pattern/wrap";
+import { structurePattern, valuePattern } from "../pattern/wrap";
+import { numberPatternRange } from "../pattern/value/number-pattern";
 import {
   arrayPatternWithElements,
   arrayPatternWithLengthInterval,
@@ -85,16 +85,27 @@ const unexpected = (input: string, token: Token, span: Span): DcborPatternError 
   return DcborPatternError.unexpectedToken(token.type, text === "" ? token.type : text, span);
 };
 
-/** The deepest nesting of groups, captures, `search`, arrays, maps and tagged values accepted by default. */
-export const DEFAULT_MAX_DEPTH = 500;
+/** A bare number literal: `1e400` reads as infinity and is the infinity pattern. */
+const numberLiteral = (value: number): Pattern =>
+  value === Infinity ? numberInfinity() : value === -Infinity ? numberNegInfinity() : number(value);
 
-/** Parses the pattern text a `Lexer` produces. */
+/** `min...max` as written; an inverted range is accepted and matches nothing. */
+const numberRangeLiteral = (min: number, max: number): Pattern =>
+  valuePattern({ type: "Number", pattern: numberPatternRange(min, max) });
+
+/** A literal's decoded value; its error is thrown when the parser consumes the token. */
+const decoded = <T>(literal: Literal<T>): T => {
+  if (literal.ok) return literal.value;
+  throw literal.error;
+};
+
+/** Parses the pattern text a `Lexer` produces; `maxDepth` bounds the nesting when given. */
 export class Parser {
   private readonly lexer: Lexer;
-  private readonly maxDepth: number;
+  private readonly maxDepth: number | undefined;
   private depth = 0;
 
-  constructor(input: string, maxDepth: number = DEFAULT_MAX_DEPTH) {
+  constructor(input: string, maxDepth?: number) {
     this.lexer = new Lexer(input);
     this.maxDepth = maxDepth;
   }
@@ -113,9 +124,10 @@ export class Parser {
     }
   }
 
-  /** Enters a nesting level at `span`, or throws `NestingTooDeep`. */
+  /** Enters a nesting level at `span`, or throws `NestingTooDeep` past a `maxDepth`. */
   private enter(span: Span): void {
-    if (++this.depth > this.maxDepth) {
+    this.depth++;
+    if (this.maxDepth !== undefined && this.depth > this.maxDepth) {
       fail(DcborPatternError.nestingTooDeep(this.maxDepth, span));
     }
   }
@@ -124,12 +136,15 @@ export class Parser {
     this.depth--;
   }
 
-  /** The next token; `undefined` at the end; throws on a lexing error. */
+  /** The next token; `undefined` at the end; throws for text no token starts. */
   private next(): SpannedToken | undefined {
     return this.lexer.next();
   }
 
-  /** The next token without consuming it; `undefined` at the end or on a lexing error. */
+  /**
+   * The next token without consuming it; `undefined` at the end, and for
+   * text no token starts, which the consumer of the lookahead then reports.
+   */
   private peek(): Token | undefined {
     try {
       return this.lexer.peekToken();
@@ -139,15 +154,14 @@ export class Parser {
     }
   }
 
-  /** The next token without consuming it; throws on a lexing error. */
-  private peekStrict(): Token | undefined {
-    return this.lexer.peekToken();
-  }
-
-  private expect(type: Token["type"], onMissing: (span: Span) => DcborPatternError): SpannedToken {
+  /**
+   * The next token, which must be `type`: any other token is
+   * `UnexpectedToken`, and the end of the source is `atEnd`.
+   */
+  private closing(type: Token["type"], atEnd: (span: Span) => DcborPatternError): SpannedToken {
     const t = this.next();
-    if (t === undefined) return fail(onMissing(this.lexer.span()));
-    if (t.token.type !== type) return fail(onMissing(t.span));
+    if (t === undefined) return fail(atEnd(this.lexer.span()));
+    if (t.token.type !== type) return fail(unexpected(this.lexer.input(), t.token, t.span));
     return t;
   }
 
@@ -175,7 +189,7 @@ export class Parser {
   private parseNot(): Pattern {
     if (this.peek()?.type === "Not") {
       this.next();
-      return not(this.parseNot());
+      return notMatching(this.parseNot());
     }
     return this.parsePrimary();
   }
@@ -193,13 +207,7 @@ export class Parser {
       case "ParenOpen": {
         this.enter(span);
         const inner = this.parseOr();
-        const close = this.next();
-        if (close === undefined) {
-          return fail(DcborPatternError.expectedCloseParen(this.lexer.span()));
-        }
-        if (close.token.type !== "ParenClose") {
-          return fail(DcborPatternError.expectedCloseParen(close.span));
-        }
+        this.closing("ParenClose", () => DcborPatternError.unexpectedEndOfInput());
         this.leave();
         return this.parseQuantifier(inner, true);
       }
@@ -208,9 +216,9 @@ export class Parser {
       case "Bool":
         return anyBool();
       case "BoolTrue":
-        return boolean(true);
+        return bool(true);
       case "BoolFalse":
-        return boolean(false);
+        return bool(false);
       case "ByteString":
         return anyByteString();
       case "Date":
@@ -218,9 +226,9 @@ export class Parser {
       case "Digest":
         return anyDigest();
       case "DigestQuoted":
-        return parseDigestQuotedContent(token.value, span);
+        return parseDigestQuotedContent(decoded(token.value), span);
       case "DateQuoted":
-        return parseDateQuotedContent(token.value, span);
+        return parseDateQuotedContent(decoded(token.value), span);
       case "Known":
         return anyKnownValue();
       case "Null":
@@ -230,15 +238,15 @@ export class Parser {
       case "Text":
         return anyText();
       case "StringLiteral":
-        return text(token.value);
+        return text(decoded(token.value));
       case "SingleQuoted":
-        return parseSingleQuotedAsKnownValue(token.value);
+        return parseSingleQuotedAsKnownValue(decoded(token.value));
       case "Regex":
-        return textRegex(checkRegex(token.pattern, "text", span));
+        return textRegex(decoded(token.pattern));
       case "HexString":
-        return byteString(token.value);
+        return byteString(decoded(token.value));
       case "HexRegex":
-        return byteStringRegex(checkRegex(token.pattern, "bytes", span));
+        return byteStringRegex(decoded(token.pattern));
       case "Tagged":
         return this.parseTagged(span);
       case "Array":
@@ -252,19 +260,15 @@ export class Parser {
       case "Range":
         return structurePattern({
           type: "Map",
-          pattern: mapPatternWithLengthInterval(token.quantifier.interval),
+          pattern: mapPatternWithLengthInterval(decoded(token.quantifier).interval),
         });
       case "NumberLiteral": {
+        const value = decoded(token.value);
         if (this.peek()?.type === "Ellipsis") {
           this.next();
-          const end = this.next();
-          if (end === undefined) return fail(DcborPatternError.unexpectedEndOfInput());
-          if (end.token.type !== "NumberLiteral") {
-            return fail(unexpected(this.lexer.input(), end.token, end.span));
-          }
-          return numberRange(token.value, end.token.value);
+          return numberRangeLiteral(value, this.parseNumberOperand());
         }
-        return number(token.value);
+        return numberLiteral(value);
       }
       case "NaN":
         return numberNaN();
@@ -301,14 +305,14 @@ export class Parser {
     }
   }
 
-  /** The number after a comparison operator. */
+  /** The number after a comparison operator or `...`. */
   private parseNumberOperand(): number {
     const t = this.next();
     if (t === undefined) return fail(DcborPatternError.unexpectedEndOfInput());
     if (t.token.type !== "NumberLiteral") {
       return fail(unexpected(this.lexer.input(), t.token, t.span));
     }
-    return t.token.value;
+    return decoded(t.token.value);
   }
 
   /** The quantifier after a group; a group always becomes a repeat. */
@@ -337,15 +341,17 @@ export class Parser {
         return wrap(Quantifier.zeroOrOne(Reluctance.Lazy));
       case "RepeatZeroOrOnePossessive":
         return wrap(Quantifier.zeroOrOne(Reluctance.Possessive));
-      case "Range":
-        return wrap(token.quantifier);
+      case "Range": {
+        this.next();
+        return repeat(pattern, decoded(token.quantifier));
+      }
       default:
         return forceRepeat ? repeat(pattern, Quantifier.exactly(1)) : pattern;
     }
   }
 
-  /** `@name(p)`; the name was consumed. */
-  private parseCapture(name: string, at: Span): Pattern {
+  /** `(` after `@name` or `search`, then the inner pattern and its `)`. */
+  private parseParenthesized(at: Span): Pattern {
     const open = this.next();
     if (open === undefined) return fail(DcborPatternError.unexpectedEndOfInput());
     if (open.token.type !== "ParenOpen") {
@@ -353,43 +359,39 @@ export class Parser {
     }
     this.enter(at);
     const inner = this.parseOr();
-    this.expect("ParenClose", (span) => DcborPatternError.expectedCloseParen(span));
+    this.closing("ParenClose", (span) => DcborPatternError.expectedCloseParen(span));
     this.leave();
-    return capture(name, inner);
+    return inner;
+  }
+
+  /** `@name(p)`; the name was consumed. */
+  private parseCapture(name: string, at: Span): Pattern {
+    return capture(name, this.parseParenthesized(at));
   }
 
   /** `search(p)`; the keyword was consumed. */
   private parseSearch(at: Span): Pattern {
-    const open = this.next();
-    if (open === undefined) return fail(DcborPatternError.unexpectedEndOfInput());
-    if (open.token.type !== "ParenOpen") {
-      return fail(unexpected(this.lexer.input(), open.token, open.span));
-    }
-    this.enter(at);
-    const inner = this.parseOr();
-    this.expect("ParenClose", (span) => DcborPatternError.expectedCloseParen(span));
-    this.leave();
-    return search(inner);
+    return search(this.parseParenthesized(at));
   }
 
   /** `[…]`; the bracket was consumed. */
   private parseBracketArray(at: Span): Pattern {
     this.enter(at);
-    const token = this.peekStrict();
-    if (token === undefined) return fail(DcborPatternError.unexpectedEndOfInput());
+    const token = this.peek();
 
-    if (token.type === "Range") {
+    if (token?.type === "Range") {
+      const interval = decoded(token.quantifier).interval;
       this.next();
-      this.expect("BracketClose", (span) => DcborPatternError.expectedCloseBracket(span));
+      this.closing("BracketClose", (span) => DcborPatternError.expectedCloseBracket(span));
       this.leave();
       return structurePattern({
         type: "Array",
-        pattern: arrayPatternWithLengthInterval(token.quantifier.interval),
+        pattern: arrayPatternWithLengthInterval(interval),
       });
     }
 
     // `[]` is any array; `[{0}]` is the empty array
-    if (token.type === "BracketClose") {
+    if (token?.type === "BracketClose") {
       this.next();
       this.leave();
       return structurePattern({
@@ -399,7 +401,7 @@ export class Parser {
     }
 
     const elements = this.parseArrayOr();
-    this.expect("BracketClose", (span) => DcborPatternError.expectedCloseBracket(span));
+    this.closing("BracketClose", (span) => DcborPatternError.expectedCloseBracket(span));
     this.leave();
     return structurePattern({ type: "Array", pattern: arrayPatternWithElements(elements) });
   }
@@ -425,7 +427,7 @@ export class Parser {
   private parseArrayNot(): Pattern {
     if (this.peek()?.type === "Not") {
       this.next();
-      return not(this.parseArrayNot());
+      return notMatching(this.parseArrayNot());
     }
     return this.parseArraySequence();
   }
@@ -443,37 +445,34 @@ export class Parser {
   /** `{…}`; the brace was consumed. `{}` is not a pattern: use `map`. */
   private parseBracketMap(at: Span): Pattern {
     this.enter(at);
-    const token = this.peekStrict();
-    if (token === undefined) return fail(DcborPatternError.unexpectedEndOfInput());
+    const token = this.peek();
 
-    if (token.type === "Range") {
+    if (token?.type === "Range") {
       this.next();
-      this.expect("BraceClose", (span) => DcborPatternError.expectedCloseBrace(span));
+      const interval = decoded(token.quantifier).interval;
+      this.closing("BraceClose", (span) => DcborPatternError.expectedCloseBrace(span));
       this.leave();
       return structurePattern({
         type: "Map",
-        pattern: mapPatternWithLengthInterval(token.quantifier.interval),
+        pattern: mapPatternWithLengthInterval(interval),
       });
     }
 
     const constraints: [Pattern, Pattern][] = [];
-    while (true) {
+    for (;;) {
       const key = this.parseOr();
-      this.expect("Colon", (span) => DcborPatternError.expectedColon(span));
+      this.closing("Colon", (span) => DcborPatternError.expectedColon(span));
       const value = this.parseOr();
       constraints.push([key, value]);
 
-      const nextToken = this.peek();
-      if (nextToken === undefined) return fail(DcborPatternError.unexpectedEndOfInput());
-      if (nextToken.type === "BraceClose") {
-        this.next();
-        break;
+      const after = this.next();
+      if (after === undefined) {
+        return fail(DcborPatternError.expectedCloseBrace(this.lexer.span()));
       }
-      if (nextToken.type === "Comma") {
-        this.next();
-        continue;
+      if (after.token.type === "BraceClose") break;
+      if (after.token.type !== "Comma") {
+        return fail(unexpected(this.lexer.input(), after.token, after.span));
       }
-      return fail(unexpected(this.lexer.input(), nextToken, this.lexer.span()));
     }
     this.leave();
     return structurePattern({ type: "Map", pattern: mapPatternWithConstraints(constraints) });
@@ -490,10 +489,10 @@ export class Parser {
     const [selector, content, consumed] = parseTaggedInner(
       remainder,
       remainderStart,
-      this.maxDepth - this.depth,
+      this.maxDepth === undefined ? undefined : this.maxDepth - this.depth,
     );
     this.lexer.bump(consumed);
-    this.expect("ParenClose", (span) => DcborPatternError.expectedCloseParen(span));
+    this.closing("ParenClose", (span) => DcborPatternError.expectedCloseParen(span));
     this.leave();
 
     switch (selector.type) {
@@ -518,7 +517,7 @@ export class Parser {
 
 /** Parses `input` as a whole pattern: nothing but whitespace may follow it. */
 export const parseAll = (input: string, maxDepth?: number): Pattern => {
-  const [pattern, consumed] = parsePrefix(input, maxDepth);
+  const [pattern, consumed] = parsePartial(input, maxDepth);
   if (consumed < input.length) {
     return fail(DcborPatternError.extraData(makeSpan(consumed, input.length)));
   }
@@ -526,7 +525,7 @@ export const parseAll = (input: string, maxDepth?: number): Pattern => {
 };
 
 /** Parses the pattern at the start of `input` and reports how much it consumed, trailing whitespace included. */
-export const parsePrefix = (input: string, maxDepth?: number): [Pattern, number] => {
+export const parsePartial = (input: string, maxDepth?: number): [Pattern, number] => {
   const parser = new Parser(input, maxDepth);
   const pattern = parser.parseOr();
   return [pattern, parser.consumed()];
@@ -586,7 +585,7 @@ const parseDigestQuotedContent = (content: string, span: Span): Pattern => {
 /** The date a dCBOR diagnostic text denotes, or `undefined`. */
 const tryParseDate = (s: string): CborDate | undefined => {
   try {
-    return CborDate.fromTaggedCbor(parseDcbor(s));
+    return CborDate.fromTaggedCbor(parseDcborItem(s));
   } catch {
     return undefined;
   }
@@ -626,7 +625,7 @@ const skipWhitespace = (src: string, pos: number): number => {
 const parseTaggedInner = (
   src: string,
   remainderStart: number,
-  maxDepth: number,
+  maxDepth: number | undefined,
 ): [TagSelector, Pattern, number] => {
   let pos = skipWhitespace(src, 0);
 

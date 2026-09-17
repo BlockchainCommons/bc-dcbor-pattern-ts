@@ -28,8 +28,10 @@ coverage
 # Rust cross-validation harness build artifacts
 tests/rust-validation/target
 
-# Lockfile: intentionally absent until @blockchaincommons/dcbor-parse is
-# published. Local verification resolves it through the workspace link, which
-# would bake an unpublishable path into bun.lock. A real lockfile is committed
-# at the first release.
+# Lockfile: intentionally absent until @blockchaincommons/dcbor-parse
+# 1.0.0-beta.2 is on npm (the registry has beta.1, and this package needs the
+# newer one). Until then no lockfile can be resolved from the registry, and a
+# local install resolves that dependency through the workspace link, which
+# would bake an unpublishable path into bun.lock. Commit a real lockfile, and
+# switch the workflows to `bun install --frozen-lockfile`, once it publishes.
 bun.lock

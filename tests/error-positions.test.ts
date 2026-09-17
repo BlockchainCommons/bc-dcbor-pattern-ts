@@ -145,4 +145,63 @@ describe("error positions", () => {
       }
     }
   });
+
+  describe("variants and spans", () => {
+    const outcome = (src: string): string => {
+      const result = tryParsePattern(src);
+      if (result.ok) return "ok";
+      const { error } = result;
+      const kind = error.details.code === "UnexpectedToken" ? `(${error.details.kind})` : "";
+      const span = error.span === undefined ? "" : `@${error.span.start}-${error.span.end}`;
+      return `${error.code}${kind}${span}`;
+    };
+
+    it("names the token the parser met, or the end of the source", () => {
+      expect(outcome("(1")).toBe("UnexpectedEndOfInput");
+      expect(outcome("(1]")).toBe("UnexpectedToken(BracketClose)@2-3");
+      expect(outcome("(1 2)")).toBe("UnexpectedToken(NumberLiteral)@3-4");
+      expect(outcome("[1 2]")).toBe("UnexpectedToken(NumberLiteral)@3-4");
+      expect(outcome("{1 2}")).toBe("UnexpectedToken(NumberLiteral)@3-4");
+      expect(outcome("{*}")).toBe("UnexpectedToken(BraceClose)@2-3");
+      expect(outcome("@a 1")).toBe("UnexpectedToken(NumberLiteral)@3-4");
+      expect(outcome("@a(1")).toBe("ExpectedCloseParen@4-4");
+      expect(outcome("search(1")).toBe("ExpectedCloseParen@8-8");
+      expect(outcome("[1")).toBe("ExpectedCloseBracket@2-2");
+      expect(outcome("{1")).toBe("ExpectedColon@2-2");
+      expect(outcome("{1:")).toBe("UnexpectedEndOfInput");
+      expect(outcome("{1:2")).toBe("ExpectedCloseBrace@4-4");
+      expect(outcome("tagged(1, *")).toBe("ExpectedCloseParen@11-11");
+      expect(outcome("1 )")).toBe("ExtraData@2-3");
+      expect(outcome("& 1")).toBe("UnexpectedToken(And)@0-1");
+    });
+
+    it("spans unrecognised text as a single-pass scanner reads it", () => {
+      expect(outcome("xyz")).toBe("UnrecognizedToken@0-1");
+      expect(outcome("@(1)")).toBe("UnrecognizedToken@0-1");
+      expect(outcome("nul")).toBe("UnrecognizedToken@0-3");
+      expect(outcome("-Inf")).toBe("UnrecognizedToken@0-4");
+      expect(outcome("..")).toBe("UnrecognizedToken@0-2");
+      expect(outcome("1 xyz")).toBe("ExtraData@2-5");
+      expect(outcome("[1 xyz]")).toBe("UnrecognizedToken@3-4");
+      expect(outcome("truex")).toBe("ExtraData@4-5");
+      expect(outcome("¬")).toBe("UnrecognizedToken@0-1");
+    });
+
+    it("reports a malformed literal when it is consumed, over the span the lexer had", () => {
+      expect(outcome("/abc")).toBe("UnterminatedRegex@0-1");
+      expect(outcome('"abc')).toBe("UnterminatedString@0-1");
+      expect(outcome("'abc")).toBe("UnterminatedString@0-1");
+      expect(outcome("h'ab")).toBe("UnterminatedHexString@0-2");
+      expect(outcome("h'zz'")).toBe("InvalidHexString@0-2");
+      expect(outcome("h'abc'")).toBe("InvalidHexString@0-2");
+      expect(outcome("h'/ab")).toBe("UnterminatedRegex@0-3");
+      expect(outcome("/a(/")).toBe("InvalidRegex@0-4");
+      expect(outcome("date'")).toBe("UnterminatedDateQuoted@0-5");
+      expect(outcome("date''")).toBe("InvalidDateFormat@0-6");
+      expect(outcome("digest'zz'")).toBe("InvalidDigestPattern@0-10");
+      expect(outcome("(1){3,1}")).toBe("InvalidRange@3-8");
+      expect(outcome("(1){3,x}")).toBe("InvalidRange@3-4");
+      expect(outcome("1 h'zz'")).toBe("ExtraData@2-7");
+    });
+  });
 });

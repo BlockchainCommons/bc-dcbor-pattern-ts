@@ -542,8 +542,8 @@ export const PATTERNS: readonly string[] = [
   "true\n",
 ];
 
-/** Prefix parses: the pattern at the start of each text and the length it consumed. */
-export const PREFIX_SOURCES: readonly string[] = [
+/** Partial parses: the pattern at the start of each text and the length it consumed. */
+export const PARTIAL_SOURCES: readonly string[] = [
   "true rest",
   "true ",
   "42    ",

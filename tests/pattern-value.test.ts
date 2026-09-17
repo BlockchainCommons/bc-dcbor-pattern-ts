@@ -2,7 +2,7 @@
  * Value pattern tests.
  */
 
-import { tryParseDcbor } from "@blockchaincommons/dcbor-parse";
+import { tryParseDcborItem } from "@blockchaincommons/dcbor-parse";
 import { describe, it, expect } from "vitest";
 import { CborDate, type Cbor, getGlobalTagsStore } from "@blockchaincommons/dcbor";
 import { registerTags } from "@blockchaincommons/tags";
@@ -41,7 +41,7 @@ const dateToCbor = (d: CborDate): Cbor => {
  * Helper to parse a CBOR diagnostic notation string into a Cbor object.
  */
 const cborFromString = (s: string): Cbor => {
-  const result = tryParseDcbor(s);
+  const result = tryParseDcborItem(s);
   if (!result.ok) {
     throw new Error(`Failed to parse CBOR: ${s}`);
   }

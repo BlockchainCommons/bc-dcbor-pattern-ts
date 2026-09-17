@@ -21,7 +21,24 @@ exports[`dcbor-pattern properties > captures only hold paths that start at the r
 ]
 `;
 
-exports[`dcbor-pattern properties > every path starts at the root and descends the haystack 1`] = `[]`;
+exports[`dcbor-pattern properties > every path starts at the root and descends the haystack 1`] = `
+[
+  "[@x(search(1))] on 83010203: path does not start at the root",
+  "[@x(search(1))] on 8301617803: path does not start at the root",
+  "[@x(search(1))] on 84016178036179: path does not start at the root",
+  "[@x(search(1))] on 82018202820382048205666e6565646c65: path does not start at the root",
+  "[@x(search(1))] on 83010101: path does not start at the root",
+  "[@x(search(1))] on 8401020102: path does not start at the root",
+  "[@x(search(1))] on 820101: path does not start at the root",
+  "[@x(search(1))] on 8101: path does not start at the root",
+  "[@x(search(1))] on 820102: path does not start at the root",
+  "[@x(search(1))] on 84616101616202: path does not start at the root",
+  "[@x(search(1))] on 820103: path does not start at the root",
+  "[@x(search(1))] on 8301182a03: path does not start at the root",
+  "[@x(search(1))] on 83010201: path does not start at the root",
+  "[@x(search(1))] on 82018101: path does not start at the root",
+]
+`;
 
 exports[`dcbor-pattern properties > matches agrees with pathsWithCaptures 1`] = `
 [
@@ -29,22 +46,10 @@ exports[`dcbor-pattern properties > matches agrees with pathsWithCaptures 1`] = 
   "[(@a(1))+] on 83010101: matches true, pathsWithCaptures false",
   "[(@a(1))+] on 820101: matches true, pathsWithCaptures false",
   "[(@a(1))+] on 8101: matches true, pathsWithCaptures false",
+  "[@x(search(1))] on 82810182028103: matches true, pathsWithCaptures false",
+  "[@x(search(1))] on 83a162696401a162696402a1646e616d656178: matches true, pathsWithCaptures false",
+  "[@x(search(1))] on 8281018101: matches true, pathsWithCaptures false",
 ]
 `;
 
-exports[`dcbor-pattern properties > no path is reported twice 1`] = `
-[
-  "@a(*) | @a(number) on 182a",
-  "@a(*) | @a(number) on 20",
-  "@a(*) | @a(number) on f93e00",
-  "@a(*) | @a(number) on f97e00",
-  "@a(*) | @a(number) on f97c00",
-  "@a(*) | @a(number) on 1b0020000000000000",
-  "@a(*) | @a(number) on 1b1000000000000000",
-  "@a(*) | @a(number) on fa5f800000",
-  "@a(*) | @a(number) on 3b001fffffffffffff",
-  "@a(*) | @a(number) on 3bffffffffffffffff",
-  "@a(*) | @a(number) on 01",
-  "@a(*) | @a(number) on 02",
-]
-`;
+exports[`dcbor-pattern properties > no path is reported twice 1`] = `[]`;

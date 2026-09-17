@@ -39,8 +39,8 @@ export type { MetaPattern } from "./pattern/meta";
 export {
   parsePattern,
   tryParsePattern,
-  parsePatternPrefix,
-  tryParsePatternPrefix,
-  type PatternPrefix,
+  parsePatternPartial,
+  tryParsePatternPartial,
+  type PatternPartial,
   type ParseOptions,
 } from "./parse";
