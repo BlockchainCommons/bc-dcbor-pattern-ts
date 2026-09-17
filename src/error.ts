@@ -106,7 +106,7 @@ export const DcborPatternErrorCode: {
   readonly ExtraData: "ExtraData";
   /** A token that cannot start or continue a pattern here. */
   readonly UnexpectedToken: "UnexpectedToken";
-  /** Text no token matches. */
+  /** Text no token starts. */
   readonly UnrecognizedToken: "UnrecognizedToken";
   /** A regex the pattern language's dialect does not accept. */
   readonly InvalidRegex: "InvalidRegex";
@@ -116,33 +116,33 @@ export const DcborPatternErrorCode: {
   readonly UnterminatedString: "UnterminatedString";
   /** A `{n,m}` range that is not one, or with `n` above `m`. */
   readonly InvalidRange: "InvalidRange";
-  /** An `h'…'` or `digest'…'` literal that is not even-length hex. */
+  /** An `h'…'` or `digest'…'` body that is not even-length hex. */
   readonly InvalidHexString: "InvalidHexString";
   /** An `h'…'` literal without its closing quote. */
   readonly UnterminatedHexString: "UnterminatedHexString";
   /** A `date'…'` body that is not a date, a range of dates, or a regex. */
   readonly InvalidDateFormat: "InvalidDateFormat";
-  /** A number literal that is not a finite dCBOR number. */
+  /** A number literal dCBOR does not read; the lexer's number grammar leaves no such literal, so it is declared and never raised. */
   readonly InvalidNumberFormat: "InvalidNumberFormat";
   /** A `digest'ur:…'` body the UR decoder rejects. */
   readonly InvalidUr: "InvalidUr";
-  /** An opening parenthesis was required. */
+  /** Declared for the reference's taxonomy; never raised. */
   readonly ExpectedOpenParen: "ExpectedOpenParen";
-  /** A closing parenthesis was required. */
+  /** The source ended inside a capture, a `search(…)` or a `tagged(…)`. */
   readonly ExpectedCloseParen: "ExpectedCloseParen";
-  /** A closing bracket was required. */
+  /** The source ended inside `[…]`. */
   readonly ExpectedCloseBracket: "ExpectedCloseBracket";
-  /** A closing brace was required. */
+  /** The source ended inside `{…}` after a key's value or a length. */
   readonly ExpectedCloseBrace: "ExpectedCloseBrace";
-  /** A colon was required between a map key and its value. */
+  /** The source ended after a map key. */
   readonly ExpectedColon: "ExpectedColon";
-  /** A pattern was required after an operator. */
+  /** Declared for the reference's taxonomy; never raised. */
   readonly ExpectedPattern: "ExpectedPattern";
-  /** Parentheses that do not pair. */
+  /** Declared for the reference's taxonomy; never raised. */
   readonly UnmatchedParentheses: "UnmatchedParentheses";
-  /** Braces that do not pair. */
+  /** Declared for the reference's taxonomy; never raised. */
   readonly UnmatchedBraces: "UnmatchedBraces";
-  /** A capture name that is not an identifier. */
+  /** Declared for the reference's taxonomy; never raised (`@` without a name is `UnrecognizedToken`). */
   readonly InvalidCaptureGroupName: "InvalidCaptureGroupName";
   /** A `digest'…'` body that is neither a UR, a regex nor a hex prefix. */
   readonly InvalidDigestPattern: "InvalidDigestPattern";
@@ -150,7 +150,7 @@ export const DcborPatternErrorCode: {
   readonly UnterminatedDigestQuoted: "UnterminatedDigestQuoted";
   /** A `date'…'` literal without its closing quote. */
   readonly UnterminatedDateQuoted: "UnterminatedDateQuoted";
-  /** Nesting deeper than `ParseOptions.maxDepth`; this package's own limit. */
+  /** Nesting deeper than `ParseOptions.maxDepth`, when a limit is set; this package's own option. */
   readonly NestingTooDeep: "NestingTooDeep";
 } = Object.freeze({
   EmptyInput: "EmptyInput",
@@ -220,7 +220,7 @@ export type DcborPatternErrorDetails =
   | {
       /** The discriminant. */
       readonly code: "UnrecognizedToken";
-      /** The unrecognised text. */
+      /** What a single-pass scanner reads before giving up: a keyword's prefix, a bare `@`, or one code point. */
       readonly span: Span;
     }
   | {
@@ -232,31 +232,31 @@ export type DcborPatternErrorDetails =
   | {
       /** The discriminant. */
       readonly code: "UnterminatedRegex";
-      /** The literal, to the end of the source. */
+      /** The opening `/` or `h'/`. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "UnterminatedString";
-      /** The literal, to the end of the source. */
+      /** The opening quote. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "InvalidRange";
-      /** The range text. */
+      /** The `{`, or the whole range when its bounds are inverted. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "InvalidHexString";
-      /** The literal. */
+      /** The `h'` of an `h'…'` literal, or the whole `digest'…'` literal. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "UnterminatedHexString";
-      /** The literal, to the end of the source. */
+      /** The opening `h'`. */
       readonly span: Span;
     }
   | {
@@ -282,55 +282,55 @@ export type DcborPatternErrorDetails =
   | {
       /** The discriminant. */
       readonly code: "ExpectedOpenParen";
-      /** Where the parenthesis was required. */
+      /** Never raised. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "ExpectedCloseParen";
-      /** The token found instead, or the end of the source. */
+      /** The end of the source. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "ExpectedCloseBracket";
-      /** The token found instead, or the end of the source. */
+      /** The end of the source. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "ExpectedCloseBrace";
-      /** The token found instead, or the end of the source. */
+      /** The end of the source. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "ExpectedColon";
-      /** The token found instead, or the end of the source. */
+      /** The end of the source. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "ExpectedPattern";
-      /** Where the pattern was required. */
+      /** Never raised. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "UnmatchedParentheses";
-      /** The parenthesis without a pair. */
+      /** Never raised. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "UnmatchedBraces";
-      /** The brace without a pair. */
+      /** Never raised. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "InvalidCaptureGroupName";
-      /** The `@` and the name. */
+      /** Never raised. */
       readonly span: Span;
       /** The name as written. */
       readonly name: string;
@@ -346,13 +346,13 @@ export type DcborPatternErrorDetails =
   | {
       /** The discriminant. */
       readonly code: "UnterminatedDigestQuoted";
-      /** The literal, to the end of the source. */
+      /** The opening `digest'`. */
       readonly span: Span;
     }
   | {
       /** The discriminant. */
       readonly code: "UnterminatedDateQuoted";
-      /** The literal, to the end of the source. */
+      /** The opening `date'`. */
       readonly span: Span;
     }
   | {
@@ -385,7 +385,7 @@ export type DcborPatternErrorTyped<C extends DcborPatternErrorCode = DcborPatter
     : never;
 
 /**
- * Thrown by `parsePattern` and `parsePatternPrefix` (and carried by the
+ * Thrown by `parsePattern` and `parsePatternPartial` (and carried by the
  * `try…` forms) for text that does not parse. `code` says why; `details`
  * carries the span and the code-specific fields; `fullMessage(source)`
  * renders the message with the source line and a caret. Instances come
@@ -397,7 +397,7 @@ export type DcborPatternErrorTyped<C extends DcborPatternErrorCode = DcborPatter
  *   parsePattern("[1, 2");
  * } catch (e) {
  *   if (DcborPatternError.isDcborPatternError(e) && e.code === "ExpectedCloseBracket") {
- *     e.details.span; // where the bracket was required
+ *     e.details.span; // the end of the source, where the bracket was required
  *   }
  * }
  * ```
@@ -527,7 +527,7 @@ export class DcborPatternError extends Error {
       span: range,
     });
   }
-  /** A number literal that is not a finite dCBOR number. */
+  /** A number literal dCBOR does not read. */
   static invalidNumberFormat(range: Span): DcborPatternErrorTyped<"InvalidNumberFormat"> {
     return DcborPatternError.make("Invalid number format", {
       code: "InvalidNumberFormat",
@@ -628,7 +628,7 @@ export class DcborPatternError extends Error {
       span: range,
     });
   }
-  /** A pattern nested deeper than `maxDepth`. */
+  /** A pattern nested deeper than a given `maxDepth`. */
   static nestingTooDeep(maxDepth: number, range: Span): DcborPatternErrorTyped<"NestingTooDeep"> {
     return DcborPatternError.make(`Nesting deeper than ${maxDepth} levels`, {
       code: "NestingTooDeep",

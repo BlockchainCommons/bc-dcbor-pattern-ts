@@ -15,13 +15,13 @@ import {
   cbor as makeCbor,
   type Cbor,
 } from "@blockchaincommons/dcbor";
-import { parseDcbor } from "@blockchaincommons/dcbor-parse";
+import { parseDcborItem } from "@blockchaincommons/dcbor-parse";
 import * as P from "../src";
 import * as F from "../src/format";
 import * as I from "../src/patterns";
 
 const hex = (u: Uint8Array): string => Buffer.from(u).toString("hex");
-const H = (diagnostic: string): Cbor => parseDcbor(diagnostic, { tags: getGlobalTagsStore() });
+const H = (diagnostic: string): Cbor => parseDcborItem(diagnostic, { tags: getGlobalTagsStore() });
 
 const renderPaths = (paths: readonly (readonly Cbor[])[]): string =>
   paths.map((p) => p.map((c) => hex(encodeCbor(c))).join(",")).join("|");
@@ -68,8 +68,8 @@ const matches = (pattern: string, haystack: string) => () =>
 const plain = (pattern: string, haystack: string) => () =>
   P.paths(P.parsePattern(pattern), H(haystack));
 const display = (src: string) => () => P.display(P.parsePattern(src));
-const prefix = (src: string) => () => {
-  const r = P.parsePatternPrefix(src);
+const partial = (src: string) => () => {
+  const r = P.parsePatternPartial(src);
   return `${P.display(r.pattern)}@${r.length}`;
 };
 const formatted = (pattern: string, haystack: string) => () => {
@@ -112,19 +112,19 @@ const rows: Record<string, () => unknown> = {
   'parsePattern("1 ")': display("1 "),
   'parsePattern(" 1 ")': display(" 1 "),
   'parsePattern("\\t1\\n")': display("\t1\n"),
-  'prefix "true rest"': prefix("true rest"),
-  'prefix "true "': prefix("true "),
-  'prefix "42    "': prefix("42    "),
-  'prefix "42    more stuff"': prefix("42    more stuff"),
-  'prefix "[1] ]"': prefix("[1] ]"),
-  'prefix "@a(1) )"': prefix("@a(1) )"),
-  'prefix "1 | 2 3"': prefix("1 | 2 3"),
-  'prefix "tagged(1, *) x"': prefix("tagged(1, *) x"),
-  'prefix "{1: 2} 3"': prefix("{1: 2} 3"),
-  'prefix "\\t 1 \\t"': prefix("\t 1 \t"),
-  'prefix "1 #"': prefix("1 #"),
-  'prefix "1 ... 2 3"': prefix("1 ... 2 3"),
-  'prefix "true"': prefix("true"),
+  'prefix "true rest"': partial("true rest"),
+  'prefix "true "': partial("true "),
+  'prefix "42    "': partial("42    "),
+  'prefix "42    more stuff"': partial("42    more stuff"),
+  'prefix "[1] ]"': partial("[1] ]"),
+  'prefix "@a(1) )"': partial("@a(1) )"),
+  'prefix "1 | 2 3"': partial("1 | 2 3"),
+  'prefix "tagged(1, *) x"': partial("tagged(1, *) x"),
+  'prefix "{1: 2} 3"': partial("{1: 2} 3"),
+  'prefix "\\t 1 \\t"': partial("\t 1 \t"),
+  'prefix "1 #"': partial("1 #"),
+  'prefix "1 ... 2 3"': partial("1 ... 2 3"),
+  'prefix "true"': partial("true"),
   // integers at or above 2^53
   "1152921504606846976 on 2^60": match("1152921504606846976", "1152921504606846976"),
   "9007199254740993 on 2^53": match("9007199254740993", "9007199254740992"),
@@ -204,6 +204,13 @@ const rows: Record<string, () => unknown> = {
   "1.0": display("1.0"),
   "1.50": display("1.50"),
   "1e400": display("1e400"),
+  "-1e400": display("-1e400"),
+  ">1e400": display(">1e400"),
+  "1e400 on Infinity": matches("1e400", "Infinity"),
+  "1e400 on 1": matches("1e400", "1"),
+  "5...1": display("5...1"),
+  "5...1 on 3": matches("5...1", "3"),
+  "1e400...5": display("1e400...5"),
   "9007199254740993": display("9007199254740993"),
   // regex objects
   "display(textRegex(/X/i))": () => P.display(P.textRegex(/X/i)),
@@ -227,6 +234,8 @@ const rows: Record<string, () => unknown> = {
     "100([1, [2]])",
   ),
   'tagged(100, {"a": @v(1)}) on 100({"a": 1})': match('tagged(100, {"a": @v(1)})', '100({"a": 1})'),
+  '{"a": @v(1), "b": @w(2)} on {"a": 1}': match('{"a": @v(1), "b": @w(2)}', '{"a": 1}'),
+  '{"a": @v(1), "b": @w(2)} on {"b": 2}': match('{"a": @v(1), "b": @w(2)}', '{"b": 2}'),
   '{"a": @v(number), "b": @v(number)} on {"a": 1}': match(
     '{"a": @v(number), "b": @v(number)}',
     '{"a": 1}',

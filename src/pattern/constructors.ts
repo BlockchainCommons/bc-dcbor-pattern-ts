@@ -84,7 +84,7 @@ export const any = (): Pattern => metaPattern({ type: "Any", pattern: anyPattern
 export const anyBool = (): Pattern => valuePattern({ type: "Bool", pattern: boolPatternAny() });
 
 /** `true` or `false`: matches that boolean. */
-export const boolean = (value: boolean): Pattern => {
+export const bool = (value: boolean): Pattern => {
   if (typeof value !== "boolean") throw new TypeError("value must be a boolean");
   return valuePattern({ type: "Bool", pattern: boolPatternValue(value) });
 };
@@ -295,7 +295,7 @@ export const or = (...patterns: Pattern[]): Pattern =>
   metaPattern({ type: "Or", pattern: orPatternCreate(requirePatterns(patterns, "or")) });
 
 /** `!p`: matches when `pattern` does not. */
-export const not = (pattern: Pattern): Pattern =>
+export const notMatching = (pattern: Pattern): Pattern =>
   metaPattern({ type: "Not", pattern: notPatternCreate(requirePattern(pattern)) });
 
 /** `@name(p)`: matches as `pattern` and names the paths it matched. */

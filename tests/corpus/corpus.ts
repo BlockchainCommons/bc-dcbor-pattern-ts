@@ -1,19 +1,21 @@
 /**
  * Differential corpus and the golden subset: every known pattern string
- * parsed, matched against a fixed set of haystacks, and formatted; the prefix
- * parses; generated valid patterns × haystacks; generated rejections; and the
- * JavaScript-only domain cases.
+ * parsed, matched against a fixed set of haystacks, and formatted; the
+ * partial parses; generated valid patterns × haystacks; generated rejections;
+ * the regex dialect differential; and the JavaScript-only domain cases.
  */
 import { encodeCbor, getGlobalTagsStore } from "@blockchaincommons/dcbor";
-import { parseDcbor } from "@blockchaincommons/dcbor-parse";
+import { parseDcborItem } from "@blockchaincommons/dcbor-parse";
 import { registerTags } from "@blockchaincommons/tags";
 import { hex, type Recipe, type FormatOpts } from "../vectors/recipes";
-import { PATTERNS, PREFIX_SOURCES } from "./patterns";
+import { PATTERNS, PARTIAL_SOURCES } from "./patterns";
 import { DOMAIN_CASES } from "./domain-cases";
+import { regexes } from "./regexes";
+export { regexes };
 
 registerTags(getGlobalTagsStore());
 const H = (diagnostic: string): string =>
-  hex(encodeCbor(parseDcbor(diagnostic, { tags: getGlobalTagsStore() })));
+  hex(encodeCbor(parseDcborItem(diagnostic, { tags: getGlobalTagsStore() })));
 
 /** Haystacks as dCBOR diagnostic text. */
 const HAYSTACK_TEXTS: readonly string[] = [
@@ -278,7 +280,7 @@ function genPattern(next: () => number, depth: number, leaves: readonly string[]
 
 export function* hand(): Generator<Recipe> {
   for (const src of PATTERNS) yield { k: "parse", src };
-  for (const src of PREFIX_SOURCES) yield { k: "prefix", src };
+  for (const src of PARTIAL_SOURCES) yield { k: "partial", src };
   for (const pattern of PATTERNS) for (const hex of HAYSTACKS) yield { k: "match", pattern, hex };
   const formatPatterns = PATTERNS.filter((_, i) => i % 9 === 0);
   for (const pattern of formatPatterns)
@@ -311,7 +313,7 @@ export function* rejections(): Generator<Recipe> {
     yield { k: "parse", src: `${src})` };
     yield { k: "parse", src: `(${src}` };
     yield { k: "parse", src: `${src} ${src}` };
-    yield { k: "prefix", src: `${src} ${src}` };
+    yield { k: "partial", src: `${src} ${src}` };
   }
 }
 
@@ -324,6 +326,7 @@ export const categories: Record<string, () => Generator<Recipe>> = {
   hand,
   valid,
   rejections,
+  regexes,
   domain,
 };
 
@@ -516,7 +519,7 @@ const GOLDEN_PROBES: readonly (readonly [string, string])[] = [
 /** The golden subset: every parse and prefix, matches on the golden haystacks, formats, generated samples, the domain. */
 export function* goldenRecipes(): Generator<Recipe> {
   for (const src of PATTERNS) yield { k: "parse", src };
-  for (const src of PREFIX_SOURCES) yield { k: "prefix", src };
+  for (const src of PARTIAL_SOURCES) yield { k: "partial", src };
   for (const pattern of PATTERNS)
     for (const hex of GOLDEN_HAYSTACKS) yield { k: "match", pattern, hex };
   for (const [pattern, text] of GOLDEN_PROBES) {
@@ -539,5 +542,6 @@ export function* goldenRecipes(): Generator<Recipe> {
     if (i++ >= 150) break;
     yield r;
   }
+  yield* regexes();
   yield* domain();
 }

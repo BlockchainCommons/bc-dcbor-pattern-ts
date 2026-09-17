@@ -1,4 +1,4 @@
-import { $ as search, $r as RegexInput, A as dateLatest, B as not, C as boolean, D as date, Dn as ValuePattern, E as capture, F as digestPrefix, G as numberInfinity, H as number, I as group, J as numberNaN, K as numberLessThan, L as knownValue, M as dateRegex, N as digest, O as dateEarliest, P as digestBinaryRegex, Q as repeat, Qr as PatternRegex, R as knownValueNamed, S as anyText, T as byteStringRegex, U as numberGreaterThan, V as nullValue, W as numberGreaterThanOrEqual, Wt as StructurePattern, X as numberRange, Y as numberNegInfinity, Z as or, _ as anyDigest, a as paths, ai as DEFAULT_RELUCTANCE, at as textRegex, b as anyNumber, d as and, ei as RegexMode, et as sequence, f as any, g as anyDate, h as anyByteString, i as matches, ii as Interval, it as text, j as dateRange, k as dateIso8601, m as anyBool, n as Pattern, ni as Quantifier, nt as taggedName, o as pathsWithCaptures, oi as Reluctance, ot as MetaPattern, p as anyArray, q as numberLessThanOrEqual, r as display, ri as DEFAULT_INTERVAL, rt as taggedRegex, t as MatchResult, ti as DEFAULT_QUANTIFIER, tt as tagged, u as patternEquals, v as anyKnownValue, w as byteString, x as anyTagged, y as anyMap, z as knownValueRegex } from "./index-DV_TAMcn.mjs";
+import { $ as search, $r as RegexInput, A as dateLatest, B as notMatching, C as bool, D as date, Dn as ValuePattern, E as capture, F as digestPrefix, G as numberInfinity, H as number, I as group, J as numberNaN, K as numberLessThan, L as knownValue, M as dateRegex, N as digest, O as dateEarliest, P as digestBinaryRegex, Q as repeat, Qr as PatternRegex, R as knownValueNamed, S as anyText, T as byteStringRegex, U as numberGreaterThan, V as nullValue, W as numberGreaterThanOrEqual, Wt as StructurePattern, X as numberRange, Y as numberNegInfinity, Z as or, _ as anyDigest, a as paths, ai as DEFAULT_RELUCTANCE, at as textRegex, b as anyNumber, d as and, ei as RegexMode, et as sequence, f as any, g as anyDate, h as anyByteString, i as matches, ii as Interval, it as text, j as dateRange, k as dateIso8601, m as anyBool, n as Pattern, ni as Quantifier, nt as taggedName, o as pathsWithCaptures, oi as Reluctance, ot as MetaPattern, p as anyArray, q as numberLessThanOrEqual, r as display, ri as DEFAULT_INTERVAL, rt as taggedRegex, t as MatchResult, ti as DEFAULT_QUANTIFIER, tt as tagged, u as patternEquals, v as anyKnownValue, w as byteString, x as anyTagged, y as anyMap, z as knownValueRegex } from "./index-BU4-sTEW.mjs";
 import { Path } from "./format.mjs";
 //#region src/error.d.ts
 /**
@@ -42,7 +42,7 @@ export declare const DcborPatternErrorCode: {
   readonly ExtraData: "ExtraData";
   /** A token that cannot start or continue a pattern here. */
   readonly UnexpectedToken: "UnexpectedToken";
-  /** Text no token matches. */
+  /** Text no token starts. */
   readonly UnrecognizedToken: "UnrecognizedToken";
   /** A regex the pattern language's dialect does not accept. */
   readonly InvalidRegex: "InvalidRegex";
@@ -52,33 +52,33 @@ export declare const DcborPatternErrorCode: {
   readonly UnterminatedString: "UnterminatedString";
   /** A `{n,m}` range that is not one, or with `n` above `m`. */
   readonly InvalidRange: "InvalidRange";
-  /** An `h'…'` or `digest'…'` literal that is not even-length hex. */
+  /** An `h'…'` or `digest'…'` body that is not even-length hex. */
   readonly InvalidHexString: "InvalidHexString";
   /** An `h'…'` literal without its closing quote. */
   readonly UnterminatedHexString: "UnterminatedHexString";
   /** A `date'…'` body that is not a date, a range of dates, or a regex. */
   readonly InvalidDateFormat: "InvalidDateFormat";
-  /** A number literal that is not a finite dCBOR number. */
+  /** A number literal dCBOR does not read; the lexer's number grammar leaves no such literal, so it is declared and never raised. */
   readonly InvalidNumberFormat: "InvalidNumberFormat";
   /** A `digest'ur:…'` body the UR decoder rejects. */
   readonly InvalidUr: "InvalidUr";
-  /** An opening parenthesis was required. */
+  /** Declared for the reference's taxonomy; never raised. */
   readonly ExpectedOpenParen: "ExpectedOpenParen";
-  /** A closing parenthesis was required. */
+  /** The source ended inside a capture, a `search(…)` or a `tagged(…)`. */
   readonly ExpectedCloseParen: "ExpectedCloseParen";
-  /** A closing bracket was required. */
+  /** The source ended inside `[…]`. */
   readonly ExpectedCloseBracket: "ExpectedCloseBracket";
-  /** A closing brace was required. */
+  /** The source ended inside `{…}` after a key's value or a length. */
   readonly ExpectedCloseBrace: "ExpectedCloseBrace";
-  /** A colon was required between a map key and its value. */
+  /** The source ended after a map key. */
   readonly ExpectedColon: "ExpectedColon";
-  /** A pattern was required after an operator. */
+  /** Declared for the reference's taxonomy; never raised. */
   readonly ExpectedPattern: "ExpectedPattern";
-  /** Parentheses that do not pair. */
+  /** Declared for the reference's taxonomy; never raised. */
   readonly UnmatchedParentheses: "UnmatchedParentheses";
-  /** Braces that do not pair. */
+  /** Declared for the reference's taxonomy; never raised. */
   readonly UnmatchedBraces: "UnmatchedBraces";
-  /** A capture name that is not an identifier. */
+  /** Declared for the reference's taxonomy; never raised (`@` without a name is `UnrecognizedToken`). */
   readonly InvalidCaptureGroupName: "InvalidCaptureGroupName";
   /** A `digest'…'` body that is neither a UR, a regex nor a hex prefix. */
   readonly InvalidDigestPattern: "InvalidDigestPattern";
@@ -86,7 +86,7 @@ export declare const DcborPatternErrorCode: {
   readonly UnterminatedDigestQuoted: "UnterminatedDigestQuoted";
   /** A `date'…'` literal without its closing quote. */
   readonly UnterminatedDateQuoted: "UnterminatedDateQuoted";
-  /** Nesting deeper than `ParseOptions.maxDepth`; this package's own limit. */
+  /** Nesting deeper than `ParseOptions.maxDepth`, when a limit is set; this package's own option. */
   readonly NestingTooDeep: "NestingTooDeep";
 };
 /** One of the `DcborPatternErrorCode` values. */
@@ -120,7 +120,7 @@ type DcborPatternErrorDetails = {
 } | {
   /** The discriminant. */
   readonly code: "UnrecognizedToken";
-  /** The unrecognised text. */
+  /** What a single-pass scanner reads before giving up: a keyword's prefix, a bare `@`, or one code point. */
   readonly span: Span;
 } | {
   /** The discriminant. */
@@ -130,27 +130,27 @@ type DcborPatternErrorDetails = {
 } | {
   /** The discriminant. */
   readonly code: "UnterminatedRegex";
-  /** The literal, to the end of the source. */
+  /** The opening `/` or `h'/`. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "UnterminatedString";
-  /** The literal, to the end of the source. */
+  /** The opening quote. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "InvalidRange";
-  /** The range text. */
+  /** The `{`, or the whole range when its bounds are inverted. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "InvalidHexString";
-  /** The literal. */
+  /** The `h'` of an `h'…'` literal, or the whole `digest'…'` literal. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "UnterminatedHexString";
-  /** The literal, to the end of the source. */
+  /** The opening `h'`. */
   readonly span: Span;
 } | {
   /** The discriminant. */
@@ -172,47 +172,47 @@ type DcborPatternErrorDetails = {
 } | {
   /** The discriminant. */
   readonly code: "ExpectedOpenParen";
-  /** Where the parenthesis was required. */
+  /** Never raised. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "ExpectedCloseParen";
-  /** The token found instead, or the end of the source. */
+  /** The end of the source. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "ExpectedCloseBracket";
-  /** The token found instead, or the end of the source. */
+  /** The end of the source. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "ExpectedCloseBrace";
-  /** The token found instead, or the end of the source. */
+  /** The end of the source. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "ExpectedColon";
-  /** The token found instead, or the end of the source. */
+  /** The end of the source. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "ExpectedPattern";
-  /** Where the pattern was required. */
+  /** Never raised. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "UnmatchedParentheses";
-  /** The parenthesis without a pair. */
+  /** Never raised. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "UnmatchedBraces";
-  /** The brace without a pair. */
+  /** Never raised. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "InvalidCaptureGroupName";
-  /** The `@` and the name. */
+  /** Never raised. */
   readonly span: Span;
   /** The name as written. */
   readonly name: string;
@@ -226,12 +226,12 @@ type DcborPatternErrorDetails = {
 } | {
   /** The discriminant. */
   readonly code: "UnterminatedDigestQuoted";
-  /** The literal, to the end of the source. */
+  /** The opening `digest'`. */
   readonly span: Span;
 } | {
   /** The discriminant. */
   readonly code: "UnterminatedDateQuoted";
-  /** The literal, to the end of the source. */
+  /** The opening `date'`. */
   readonly span: Span;
 } | {
   /** The discriminant. */
@@ -255,7 +255,7 @@ type DcborPatternErrorTyped<C extends DcborPatternErrorCode = DcborPatternErrorC
   readonly details: DcborPatternErrorDetailsByCode[C];
 } : never;
 /**
- * Thrown by `parsePattern` and `parsePatternPrefix` (and carried by the
+ * Thrown by `parsePattern` and `parsePatternPartial` (and carried by the
  * `try…` forms) for text that does not parse. `code` says why; `details`
  * carries the span and the code-specific fields; `fullMessage(source)`
  * renders the message with the source line and a caret. Instances come
@@ -267,7 +267,7 @@ type DcborPatternErrorTyped<C extends DcborPatternErrorCode = DcborPatternErrorC
  *   parsePattern("[1, 2");
  * } catch (e) {
  *   if (DcborPatternError.isDcborPatternError(e) && e.code === "ExpectedCloseBracket") {
- *     e.details.span; // where the bracket was required
+ *     e.details.span; // the end of the source, where the bracket was required
  *   }
  * }
  * ```
@@ -315,7 +315,7 @@ export declare class DcborPatternError extends Error {
   static unterminatedHexString(range: Span): DcborPatternErrorTyped<"UnterminatedHexString">;
   /** A `date'…'` body that is not a date, a range of dates, or a regex. */
   static invalidDateFormat(range: Span): DcborPatternErrorTyped<"InvalidDateFormat">;
-  /** A number literal that is not a finite dCBOR number. */
+  /** A number literal dCBOR does not read. */
   static invalidNumberFormat(range: Span): DcborPatternErrorTyped<"InvalidNumberFormat">;
   /** A `digest'ur:…'` body the UR decoder rejects. */
   static invalidUr(cause: string, range: Span): DcborPatternErrorTyped<"InvalidUr">;
@@ -343,18 +343,23 @@ export declare class DcborPatternError extends Error {
   static unterminatedDigestQuoted(range: Span): DcborPatternErrorTyped<"UnterminatedDigestQuoted">;
   /** A `date'…'` literal without its closing quote. */
   static unterminatedDateQuoted(range: Span): DcborPatternErrorTyped<"UnterminatedDateQuoted">;
-  /** A pattern nested deeper than `maxDepth`. */
+  /** A pattern nested deeper than a given `maxDepth`. */
   static nestingTooDeep(maxDepth: number, range: Span): DcborPatternErrorTyped<"NestingTooDeep">;
 }
 //#endregion
 //#region src/parse/index.d.ts
-/** How deep a pattern may nest; the field has a default. */
+/** An optional limit on how deep a pattern may nest. */
 interface ParseOptions {
-  /** The deepest nesting of groups, captures, `search`, arrays, maps and tagged values accepted (a positive integer), 500 by default. */
+  /**
+   * The deepest nesting of groups, captures, `search`, arrays, maps and
+   * tagged values accepted (a positive integer). No limit by default: text
+   * nested a few thousand levels deep then exhausts the engine's stack with
+   * a `RangeError`.
+   */
   readonly maxDepth?: number | undefined;
 }
-/** A parsed pattern prefix and how many UTF-16 code units it consumed. */
-interface PatternPrefix {
+/** A parsed pattern and how many UTF-16 code units of the text it consumed. */
+interface PatternPartial {
   /** The pattern. */
   readonly pattern: Pattern;
   /** How many UTF-16 code units it consumed, trailing whitespace included. */
@@ -363,7 +368,7 @@ interface PatternPrefix {
 /**
  * Parses a whole pattern string; whitespace may follow the pattern.
  *
- * @throws {DcborPatternError} If the string is not a pattern, has trailing input, or nests deeper than `maxDepth`
+ * @throws {DcborPatternError} If the string is not a pattern, has trailing input, or nests deeper than a given `maxDepth`
  * @throws {TypeError} If `input` is not a string
  * @throws {RangeError} If `maxDepth` is not a positive integer
  */
@@ -379,9 +384,9 @@ export declare function tryParsePattern(input: string, options?: ParseOptions): 
  * @throws {TypeError} If `input` is not a string
  * @throws {RangeError} If `maxDepth` is not a positive integer
  */
-export declare function parsePatternPrefix(input: string, options?: ParseOptions): PatternPrefix;
-/** `parsePatternPrefix` with the error returned instead of thrown; a `TypeError` or `RangeError` still throws. */
-export declare function tryParsePatternPrefix(input: string, options?: ParseOptions): DcborResult<PatternPrefix, DcborPatternError>;
+export declare function parsePatternPartial(input: string, options?: ParseOptions): PatternPartial;
+/** `parsePatternPartial` with the error returned instead of thrown; a `TypeError` or `RangeError` still throws. */
+export declare function tryParsePatternPartial(input: string, options?: ParseOptions): DcborResult<PatternPartial, DcborPatternError>;
 //#endregion
-export { DEFAULT_INTERVAL, DEFAULT_QUANTIFIER, DEFAULT_RELUCTANCE, type DcborPatternErrorDetails, type DcborPatternErrorDetailsByCode, type DcborPatternErrorTyped, type DcborResult, Interval, type MatchResult, type MetaPattern, type ParseOptions, type Path, type Pattern, type PatternPrefix, type PatternRegex, Quantifier, type RegexInput, type RegexMode, Reluctance, type Span, type StructurePattern, type TokenKind, type ValuePattern, and, any, anyArray, anyBool, anyByteString, anyDate, anyDigest, anyKnownValue, anyMap, anyNumber, anyTagged, anyText, boolean, byteString, byteStringRegex, capture, date, dateEarliest, dateIso8601, dateLatest, dateRange, dateRegex, digest, digestBinaryRegex, digestPrefix, display, group, knownValue, knownValueNamed, knownValueRegex, matches, not, nullValue, number, numberGreaterThan, numberGreaterThanOrEqual, numberInfinity, numberLessThan, numberLessThanOrEqual, numberNaN, numberNegInfinity, numberRange, or, paths, pathsWithCaptures, patternEquals, repeat, search, sequence, tagged, taggedName, taggedRegex, text, textRegex };
+export { DEFAULT_INTERVAL, DEFAULT_QUANTIFIER, DEFAULT_RELUCTANCE, type DcborPatternErrorDetails, type DcborPatternErrorDetailsByCode, type DcborPatternErrorTyped, type DcborResult, Interval, type MatchResult, type MetaPattern, type ParseOptions, type Path, type Pattern, type PatternPartial, type PatternRegex, Quantifier, type RegexInput, type RegexMode, Reluctance, type Span, type StructurePattern, type TokenKind, type ValuePattern, and, any, anyArray, anyBool, anyByteString, anyDate, anyDigest, anyKnownValue, anyMap, anyNumber, anyTagged, anyText, bool, byteString, byteStringRegex, capture, date, dateEarliest, dateIso8601, dateLatest, dateRange, dateRegex, digest, digestBinaryRegex, digestPrefix, display, group, knownValue, knownValueNamed, knownValueRegex, matches, notMatching, nullValue, number, numberGreaterThan, numberGreaterThanOrEqual, numberInfinity, numberLessThan, numberLessThanOrEqual, numberNaN, numberNegInfinity, numberRange, or, paths, pathsWithCaptures, patternEquals, repeat, search, sequence, tagged, taggedName, taggedRegex, text, textRegex };
 //# sourceMappingURL=index.d.mts.map

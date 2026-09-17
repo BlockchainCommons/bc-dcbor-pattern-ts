@@ -21,8 +21,8 @@ export const DOMAIN_CASES: Record<string, (m: any, deps: CurrentDeps) => unknown
   "src-null": (m) => m.parsePattern(null),
   "src-number": (m) => m.parsePattern(123),
   "try-src-undefined": (m) => m.tryParsePattern(undefined),
-  "prefix-src-undefined": (m) => m.parsePatternPrefix(undefined),
-  "try-prefix-src-number": (m) => m.tryParsePatternPrefix(1),
+  "partial-src-undefined": (m) => m.parsePatternPartial(undefined),
+  "try-partial-src-number": (m) => m.tryParsePatternPartial(1),
   "haystack-undefined": (m) => m.paths(m.parsePattern("number"), undefined),
   "haystack-null": (m) => m.paths(m.parsePattern("number"), null),
   "haystack-plain-object": (m) => m.paths(m.parsePattern("number"), {}),
@@ -97,7 +97,7 @@ export const DOMAIN_CASES: Record<string, (m: any, deps: CurrentDeps) => unknown
     const r = m.pathsWithCaptures(m.parsePattern("@a(1)"), deps.decodeCbor(deps.encodeCbor(1)));
     return [Object.isFrozen(r), Object.isFrozen(r.paths)];
   },
-  "frozen-prefix-result": (m) => Object.isFrozen(m.parsePatternPrefix("1 2")),
+  "frozen-partial-result": (m) => Object.isFrozen(m.parsePatternPartial("1 2")),
   "frozen-code-tables": (m) => [
     Object.isFrozen(m.DcborPatternErrorCode),
     Object.isFrozen(m.Reluctance),
@@ -109,6 +109,7 @@ export const DOMAIN_CASES: Record<string, (m: any, deps: CurrentDeps) => unknown
   // nesting depth
   "nest-400-balanced": (m) => m.display(m.parsePattern(deep(400))).length,
   "nest-501-balanced": (m) => m.display(m.parsePattern(deep(501))).length,
+  "nest-1000-balanced": (m) => m.display(m.parsePattern(deep(1000))).length,
   "try-nest-501-balanced": (m) => {
     const r = m.tryParsePattern(deep(501));
     return r.ok ? "ok" : `${r.error.code}`;

@@ -474,6 +474,7 @@ dependencies = [
  "dcbor",
  "dcbor-pattern",
  "hex",
+ "regex",
  "serde",
  "serde_json",
 ]

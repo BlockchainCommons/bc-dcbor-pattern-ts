@@ -1,15 +1,6 @@
 # Migrating to the redesigned `@blockchaincommons/dcbor-pattern`
 
-The pattern language, its canonical display strings, the paths and captures
-a match yields (and their order) and the formatted output are unchanged;
-this was proven against a frozen pre-redesign bundle
-(`tests/differential.test.ts`, 8 961 golden vectors) and against
-`bc-dcbor-pattern-rust` 0.11.1 (`tests/rust-validation`: 8 551 of 8 961
-vectors byte-identical, the rest the documented classes in
-`RUST_DIVERGENCES.md`). Matching bugs were fixed towards the reference on
-the way (see §5). §0 lists the changes of the current tree; §1 onwards
-describes the earlier move from the `Result`-based API.
-
+`@blockchaincommons/dcbor-pattern` is the successor to `@bcts/dcbor-pattern`.
 
 ## 0. Checklist for the current API
 
@@ -21,8 +12,10 @@ records each change as a named row. Work through the list:
 - [ ] `@blockchaincommons/dcbor-pattern/internal` is now
   `@blockchaincommons/dcbor-pattern/patterns` (same names).
 - [ ] `@blockchaincommons/dcbor-pattern/lexer` is gone. Languages that embed
-  dCBOR patterns use `parsePatternPrefix`, which reports how much of the
+  dCBOR patterns use `parsePatternPartial`, which reports how much of the
   text it consumed.
+- [ ] `not(p)` is `notMatching(p)` and `nullPattern()` is `nullValue()`;
+  `bool(v)` keeps its name.
 - [ ] `ParseResult<T>` is `DcborResult<T, DcborPatternError>`; `Result`,
   `Ok`, `Err`, `ParseFailure` and `failureMessage` are gone.
 - [ ] `error.details.span` is `error.span`; `error.details` is a
@@ -51,20 +44,40 @@ records each change as a named row. Work through the list:
   a `TypeError`; invalid constructor values (`number(NaN)`, `capture("a b",
   …)`, `digestPrefix` over 32 bytes, an inverted `numberRange`, an invalid
   `dateIso8601`) are `RangeError`s.
-- [ ] `parsePattern` and `parsePatternPrefix` take `{ maxDepth }` (500 by
-  default) and reject deeper text with `NestingTooDeep`.
+- [ ] `parsePattern` and `parsePatternPartial` take an optional
+  `{ maxDepth }` and reject deeper text with `NestingTooDeep`; there is no
+  default limit.
+- [ ] A number literal beyond the double range (`1e400`) parses as the
+  infinity pattern; before it was `InvalidNumberFormat`. An inverted range
+  (`5...1`) parses and matches nothing; before it threw a `RangeError`.
+- [ ] A map pattern whose keys match and whose values do not reports the
+  captures of the constraints it satisfied, with no paths; before it
+  reported none.
 - [ ] Number display no longer uses an exponent (`1e21` displays as
   `1000000000000000000000`); integers beyond 2⁵³ round-trip exactly.
 - [ ] Trailing whitespace after a pattern is consumed by
-  `parsePatternPrefix` and reported in `length`.
+  `parsePatternPartial` and reported in `length`.
 - [ ] `search` de-duplicates its paths; captures inside repeats and groups
   follow the reference's dispatch (see `RUST_DIVERGENCES.md`).
+- [ ] Regexes are read as the reference's dialect and translated: `\w`,
+  `\d`, `\s`, `\b` are Unicode-aware, `.` matches any code point but `\n`,
+  `(?m)` anchors at `\n` only, `a**` and `(?U)` are accepted, `\p{…}` takes
+  loose names, classes nest and take set operations. A byte regex runs in
+  Unicode mode over the bytes (`h'/é/'` matches `c3a9`) unless it starts
+  with `(?-u)`; before, it ran over one character per byte. Lookaround and
+  backreferences stay rejected.
+- [ ] Rejections carry the reference's variants and spans: `UnexpectedToken`
+  names the token met, `UnexpectedEndOfInput` or `ExpectedClose…` the end
+  of the source; an unterminated literal spans its opening delimiter;
+  unrecognised text spans a keyword's prefix or one character;
+  `InvalidCaptureGroupName` is no longer raised (`@(1)` is
+  `UnrecognizedToken`).
 
 ## 1. Entries
 
 | Entry | Contents |
 |---|---|
-| root | `parsePattern`/`tryParsePattern` (and the `…Prefix` forms), the constructors, `paths`, `matches`, `display`, `pathsWithCaptures`, `Interval`, `Quantifier`, `Reluctance`, `DcborPatternError` |
+| root | `parsePattern`/`tryParsePattern` (and the `…Partial` forms), the constructors, `paths`, `matches`, `display`, `pathsWithCaptures`, `Interval`, `Quantifier`, `Reluctance`, `DcborPatternError` |
 | `/format` | `formatPaths`, `formatPath`, `FormatPathsOptions`, `PathElementFormat` |
 | `/patterns` | the per-kind pattern types, constructors, matchers and displayers, for languages that embed dCBOR patterns |
 
@@ -76,7 +89,7 @@ parsers and matchers) are no longer re-exported.
 | Before | After |
 |---|---|
 | `parse(src): Result<Pattern>` | `parsePattern(src): Pattern` (throws `DcborPatternError`) or `tryParsePattern(src): DcborResult<Pattern, DcborPatternError>` |
-| `parsePartial(src): Result<[Pattern, number]>` | `parsePatternPrefix(src): { pattern, length }` or `tryParsePatternPrefix(src)` |
+| `parsePartial(src): Result<[Pattern, number]>` | `parsePatternPartial(src): { pattern, length }` or `tryParsePatternPartial(src)` |
 | `Result`, `Ok`, `Err`, `unwrap`, `unwrapOr`, `map`, `errorToString`, `adjustSpan`, the bare `Error` union, `PatternError { errorType }` | `DcborPatternError { code, details, span, fullMessage(source) }`, `DcborPatternErrorCode`, `DcborResult<T, E> = { ok: true, value } \| { ok: false, error: E }` |
 | `result.error.type` / `result.error.span` | `result.error.code` / `result.error.span` |
 
@@ -90,12 +103,12 @@ Spans stay UTF-16 code-unit offsets.
 | `patternMatches(p, cbor)` / `matches` | `matches(p, cbor)` |
 | `patternDisplay(p)` | `display(p)` |
 | `patternPathsWithCaptures(p, cbor)` / `pathsWithCaptures` / `pathsWithCapturesDirect` | `pathsWithCaptures(p, cbor)` → `{ paths, captures: Map<string, Path[]> }` |
-| `nullPattern()` / `bool(v)` | `nullValue()` / `boolean(v)` |
-| `Lexer.new(src)` | `parsePatternPrefix(src)` |
+| `nullPattern()` / `not(p)` | `nullValue()` / `notMatching(p)` |
+| `Lexer.new(src)` | `parsePatternPartial(src)` |
 
 Every other constructor (`any`, `number`, `numberRange`, `text`, `textRegex`,
 `byteString`, `date…`, `digest…`, `knownValue…`, `anyArray`, `anyMap`,
-`anyTagged`, `and`, `or`, `not`, `capture`, `search`, `sequence`, `repeat`,
+`anyTagged`, `and`, `or`, `bool`, `capture`, `search`, `sequence`, `repeat`,
 `group`, …) keeps its name.
 
 ## 4. Formatting (`/format`)

@@ -96,8 +96,9 @@ export const mapPatternPaths = (pattern: MapPattern, haystack: Cbor, ops: Patter
 /**
  * The paths and captures of the map pattern on the haystack. Every capture
  * inside a constraint is reported as `[map, key]` or `[map, value]`, the
- * entry that satisfied the constraint; a map that does not match yields no
- * captures.
+ * entry that satisfied the constraint. A map that does not match yields no
+ * paths but keeps the captures of the constraints satisfied before the one
+ * that failed, as the reference reports them.
  */
 export const mapPatternPathsWithCaptures = (
   pattern: MapPattern,
@@ -138,7 +139,7 @@ export const mapPatternPathsWithCaptures = (
           satisfied = true;
           break;
         }
-        if (!satisfied) return [[], new Map<string, Path[]>()];
+        if (!satisfied) return [[], captures];
       }
       return [[[haystack]], captures];
     }

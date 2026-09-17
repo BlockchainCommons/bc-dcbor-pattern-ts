@@ -81,14 +81,22 @@ if (!rejected.ok) {
 }
 
 try {
-  parsePattern("@(1)");
+  parsePattern("(1 2)");
 } catch (e) {
-  if (DcborPatternError.isDcborPatternError(e)) console.log(e.fullMessage("@(1)"));
-  // line 1: Invalid capture group name ''
-  // @(1)
-  // ^
+  if (DcborPatternError.isDcborPatternError(e)) console.log(e.fullMessage("(1 2)"));
+  // line 1: Unexpected token `2`
+  // (1 2)
+  //    ^
 }
 ```
+
+Errors name the token the parser met (`UnexpectedToken`, or
+`UnrecognizedToken` for text no token starts) or the end of the source
+(`UnexpectedEndOfInput`, or `ExpectedCloseParen`, `ExpectedCloseBracket`,
+`ExpectedCloseBrace` and `ExpectedColon` when it ends inside a capture,
+`search(…)`, `tagged(…)`, an array or a map), with the reference's variants
+and spans: an unterminated literal spans its opening delimiter, and
+unrecognised text spans what a single-pass scanner reads before giving up.
 
 Spans are UTF-16 code-unit offsets; `spanToByteOffsets(source, span)`
 converts one to UTF-8 byte offsets. A wrong argument type (a haystack that
@@ -97,10 +105,12 @@ a `TypeError`; a wrong value (`number(NaN)`, an inverted range, a capture
 name that is not an identifier, a `maxDepth` that is not a positive
 integer) is a `RangeError`.
 
-`parsePatternPrefix` parses the pattern at the start of a longer text and
+`parsePatternPartial` parses the pattern at the start of a longer text and
 reports how much it consumed, for languages that embed dCBOR patterns.
-Nesting is limited to 500 levels by default (`ParseOptions.maxDepth`);
-deeper text is rejected with `NestingTooDeep`.
+Nesting is not limited by default, as in the reference: text nested a few
+thousand levels deep exhausts the engine's stack with a `RangeError`.
+`ParseOptions.maxDepth` sets a limit when one is wanted; deeper text is
+then rejected with `NestingTooDeep`.
 
 ### Entries
 
@@ -130,7 +140,7 @@ Whitespace between tokens is ignored. Keywords are case-sensitive.
 | `/regex/` | text the regex matches |
 | `bstr` | any byte string |
 | `h'0a0b'` | those bytes |
-| `h'/regex/'` | a byte string the regex matches, one character per byte (`\xNN` names a byte) |
+| `h'/regex/'` | a byte string the regex matches, read as UTF-8 (or as raw bytes under `(?-u)`) |
 | `date` | any date (tag 1) |
 | `date'2024-01-01'` | that date (ISO-8601, a bare date or a full timestamp) |
 | `date'2024-01-01...2024-12-31'`, `date'2024-01-01...'`, `date'...2024-12-31'` | a date in the range, from the date on, or up to the date |
@@ -171,25 +181,36 @@ pattern.
 
 ### Regex dialect
 
-A regex inside a pattern is written in the dialect of the pattern language,
-which is shared with every implementation, and translated to a JavaScript
-regex when the pattern is parsed:
+A regex inside a pattern (`/…/`, `'/…/'`, `date'/…/'`, `tagged(/…/, p)`,
+`h'/…/'`, `digest'/…/'`) is written in the dialect every implementation of
+the pattern language shares, and translated to a JavaScript regex that
+matches the same strings when the pattern is parsed:
 
-- A text regex runs over code points; a byte regex runs over one character
-  per byte, so `\xNN` and `[\x00-\x7f]` name bytes.
-- Leading `(?i)`, `(?m)`, `(?s)`, `(?x)` groups set the flags; `(?P<name>…)`
-  is a named group; `\x{hhhh}` is a code point; `\pL` and `\p{Greek}` are
-  Unicode classes; `\A` and `\z` anchor at the ends; `[[:alpha:]]` and the
-  other POSIX classes are accepted.
-- Possessive quantifiers (`a*+`) are accepted and run greedy.
-- Lookaround, backreferences and `(?U)` are not part of the dialect and are
-  rejected with `InvalidRegex`. `\w`, `\d` and `\b` are ASCII, as in
-  JavaScript.
+- `\w`, `\d`, `\s` and `\b` are Unicode-aware; `.` matches any code point
+  but `\n`; `(?m)` anchors at `\n` only; `(?s)`, `(?R)`, `(?U)` (the greed
+  swap), `(?x)` (verbose mode) and scoped `(?i:…)` work as in the dialect;
+  `a**` is nested repetition; `\a`, `\x{…}`, `\u`, `\U`, `\b{start}` and
+  the escapable punctuation are accepted; `\p{…}` takes loose names
+  (`\p{greek}`, `\p{sc=Greek}`, `\p{any}`); classes nest and take `&&`,
+  `--`, `~~` and `[:alpha:]`.
+- A text regex runs over the text's code points. A byte regex runs in
+  Unicode mode over the bytes: `h'/é/'` matches the UTF-8 bytes of `é`,
+  `\xff` is U+00FF and a byte that is not part of a valid sequence matches
+  nothing; under a leading `(?-u)` it runs over the raw bytes with ASCII
+  classes and `\xNN` names byte NN.
+- Lookaround, backreferences, `\Z`, octal escapes, `{,n}` and more than
+  250 nested groups are rejected with `InvalidRegex`, as the dialect
+  rejects them.
+- Not translated: the Unicode property tables the engine lacks (`Age`,
+  `gcb`, `wb`, `sb`), and Unicode mode changing inside a byte regex
+  (`a(?-u:\xff)`); these are `InvalidRegex` here and accepted by the
+  reference. The regex runs on JavaScript's backtracking engine, so a
+  pathological regex can take exponential time where the reference's
+  engine is linear.
 
-A constructor also accepts a `RegExp`: its `i`, `m` and `s` flags become
-inline flags, `u` is implied, and `g` or `y` are refused.
-
-Runnable examples live in the [`examples/`](https://github.com/BlockchainCommons/bc-dcbor-pattern-ts/tree/master/examples) directory.
+The translation is proven against the reference's engine by a differential
+corpus of regex sources over text and byte subjects, replayed by
+`tests/rust-validation`.
 
 ## Status - Beta
 
@@ -219,7 +240,7 @@ To build and work on this library, you'll need the following tools:
 This `bc-dcbor-pattern-ts` project is either derived from or was inspired by:
 
 - [BlockchainCommons/bc-dcbor-pattern-rust](https://github.com/BlockchainCommons/bc-dcbor-pattern-rust) - The reference Rust implementation, by [Wolf McNally](https://github.com/wolfmcnally).
-- [paritytech/bcts](https://github.com/paritytech/bcts) - A TypeScript port covering many Blockchain Commons' implementations, by [Parity Technologies](https://github.com/paritytech).
+- [paritytech/bcts](https://github.com/paritytech/bcts) - A TypeScript port of many Blockchain Commons' specs, by [Parity Technologies](https://github.com/paritytech).
 
 ## Financial Support
 

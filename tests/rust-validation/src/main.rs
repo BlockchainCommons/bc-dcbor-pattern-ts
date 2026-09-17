@@ -3,26 +3,24 @@
 //!   cargo run --release -- ../vectors/vectors.json
 //!   VERBOSE=1 cargo run --release -- ../vectors/vectors.json   # print every classified row
 //!
-//! Every vector is a pattern's display, `display@length` for a prefix parse,
+//! Every vector is a pattern's display, `display@length` for a partial parse,
 //! `paths=[…] captures{…}` with every path element as dCBOR hex, a formatted
-//! match, or `throw:<Variant>[(<Token>)]@start-end`. Rust spans are byte
-//! offsets; the harness converts them to UTF-16 code units so they compare
-//! with the port's. Classes (see RUST_DIVERGENCES.md):
+//! match, `match`/`no-match`/`throw:InvalidRegex` for a bare regex run over a
+//! subject (the dialect differential), or `throw:<Variant>[(<Token>)]@start-end`.
+//! Rust spans are byte offsets; the harness converts them to UTF-16 code units
+//! so they compare with the port's. Classes (see RUST_DIVERGENCES.md):
 //!   match    identical outcome
-//!   S1       both reject with the same variant at a different span
-//!   S2       both reject with different variants (the reference reports the
-//!            token it saw; the port reports what it expected)
 //!   R1       a named-tag pattern matches decoded data in the port and never
 //!            in the reference (`Tag::name()` does not consult the tags store)
-//!   R2       the known values `value` (25) and `Self` (706) resolve in the
-//!            port and not in the reference's store
-//!   X1       regex dialect: both parse, the match differs (Unicode classes,
-//!            `\w`/`\d`/`\b`)
-//!   X2       regex syntax: one side rejects
-//!   X3       byte regex mode: the port runs bytes, the reference Unicode
-//!   U1       `1e400` is `inf` in the reference; the port rejects it
-//!   U3       captures reported for a non-matching map in the reference
-//!   N1       the port's nesting limit (`NestingTooDeep`); the reference has none
+//!   R2       text no token starts, where a specific token was required: the
+//!            reference propagates its bare `Unknown` (no span); the port
+//!            reports `UnrecognizedToken` with the text's span
+//!   X4       a regex construct the engine cannot express: a Unicode property
+//!            table it lacks (`Age`, `gcb`, `wb`, `sb`), or Unicode mode
+//!            changing inside a byte regex; the reference accepts, the port
+//!            rejects
+//!   U1       an infinite literal (`1e400`) displays `inf` in the reference,
+//!            which its lexer cannot read back; the port displays `Infinity`
 //!   js-only  a `domain` recipe the reference's types cannot express
 //!   pending  a divergence a later wave closes; expected to reach zero
 //!   MISMATCH anything else; exit 1
@@ -151,7 +149,21 @@ fn run(r: &serde_json::Value) -> Outcome {
     }
     let out = catch_unwind(AssertUnwindSafe(|| {
         let src = r.get("src").or_else(|| r.get("pattern")).and_then(|s| s.as_str()).unwrap();
-        if k == "prefix" {
+        if k == "regex" {
+            // the dialect differential: the reference's own engine over the subject
+            let matched = if r["mode"] == "bytes" {
+                let subject = hex::decode(r["subject"].as_str().unwrap()).unwrap();
+                regex::bytes::Regex::new(src).map(|re| re.is_match(&subject))
+            } else {
+                regex::Regex::new(src).map(|re| re.is_match(r["subject"].as_str().unwrap()))
+            };
+            return match matched {
+                Ok(true) => "match".to_string(),
+                Ok(false) => "no-match".to_string(),
+                Err(_) => "throw:InvalidRegex".to_string(),
+            };
+        }
+        if k == "partial" {
             return match Pattern::parse_partial(src) {
                 Ok((p, n)) => format!("{p}@{}", cu(src, n)),
                 Err(e) => format!("throw:{}", describe(src, &e)),
@@ -184,9 +196,6 @@ fn variant(s: &str) -> String {
 fn source(recipe: &serde_json::Value) -> &str {
     recipe.get("src").or_else(|| recipe.get("pattern")).and_then(|s| s.as_str()).unwrap_or("")
 }
-fn haystack_hex(recipe: &serde_json::Value) -> &str {
-    recipe.get("hex").and_then(|s| s.as_str()).unwrap_or("")
-}
 fn is_named_tag_pattern(src: &str) -> bool {
     src.trim_start().starts_with("tagged(")
         && !src
@@ -195,60 +204,36 @@ fn is_named_tag_pattern(src: &str) -> bool {
             .trim_start()
             .starts_with(|c: char| c.is_ascii_digit() || c == '+' || c == '-' || c == '*')
 }
-fn is_text_regex(src: &str) -> bool {
-    let s = src.trim_start_matches(|c: char| c == '@' || c.is_alphanumeric() || c == '_' || c == '(');
-    s.starts_with('/') || src.starts_with("'/") || src.contains("date'/") || src.contains("tagged(/")
-}
-fn is_byte_regex(src: &str) -> bool {
-    src.contains("h'/") || src.contains("digest'/")
-}
-
 /// The class of an expected divergence, or `None` for a mismatch.
 fn classify(recipe: &serde_json::Value, got: &str, want: &str) -> Option<&'static str> {
     let k = recipe["k"].as_str().unwrap_or("");
     let src = source(recipe);
     let both_reject = got.starts_with("throw:") && want.starts_with("throw:");
     let (gv, wv) = (variant(got), variant(want));
-    if wv == "NestingTooDeep" {
-        return Some("N1");
-    }
-    // the reference parses `1e400` to inf and displays `inf`; the port rejects the literal
-    if wv == "InvalidNumberFormat" && src.contains("e400") {
+    // the reference displays an infinite literal as `inf`; the port displays the syntax's `Infinity`
+    if k != "match" && k != "format" && got.replace("inf", "Infinity") == want {
         return Some("U1");
-    }
-    if k == "match" && got.starts_with("paths=[] captures{") && want == "paths=[]" {
-        return Some("U3");
     }
     // named tags on decoded data; known values the reference's store lacks
     if is_named_tag_pattern(src) && k != "parse" && got.starts_with("paths=[]") && !want.starts_with("paths=[]") {
         return Some("R1");
     }
-    // regexes
-    let text_regex = is_text_regex(src);
-    let byte_regex = is_byte_regex(src);
-    if (text_regex || byte_regex) && (gv == "InvalidRegex") != (wv == "InvalidRegex") {
-        return Some("X2");
-    }
-    if byte_regex && k != "parse" && !both_reject && got != want {
-        return Some("X3");
-    }
-    if text_regex && k != "parse" && !both_reject && got != want && !src.contains('@') && !src.contains("search") {
-        return Some("X1");
-    }
-    if both_reject && gv == wv {
-        return Some("S1");
-    }
-    if both_reject {
-        return Some("S2");
-    }
-    let h = haystack_hex(recipe);
-    if (src.contains("'value'") || src.contains("'Self'") || src.contains("'/^value$/'")
-        || (src.starts_with("'/") && (h == "d99c401819" || h == "d99c401902c2")))
-        && got != want
-    {
+    if both_reject && gv == "Unknown" && wv == "UnrecognizedToken" {
         return Some("R2");
     }
-    // pending waves
+    if k == "regex" && wv == "InvalidRegex" && !got.starts_with("throw:") {
+        let lower = src.to_lowercase().replace(['_', '-', ' '], "");
+        let unsupported_property = [
+            "age=", "gcb=", "wb=", "sb=", "graphemeclusterbreak=", "wordbreak=", "sentencebreak=",
+        ]
+        .iter()
+        .any(|p| lower.contains(&format!("\\p{{{p}")) || lower.contains(&format!("\\P{{{p}")));
+        let mode_change = recipe["mode"] == "bytes"
+            && ((src.contains("(?-u") && !src.starts_with("(?-u)")) || src.contains("(?u"));
+        if unsupported_property || mode_change {
+            return Some("X4");
+        }
+    }
     None
 }
 

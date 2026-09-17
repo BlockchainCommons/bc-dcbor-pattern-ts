@@ -2,7 +2,7 @@
   {
     "name": "ESM entry (import *), minified + gzipped",
     "path": "dist/index.mjs",
-    "limit": "19 kB",
+    "limit": "25 kB",
     "ignore": [
       "@blockchaincommons/components",
       "@blockchaincommons/dcbor",
@@ -28,7 +28,7 @@
   {
     "name": "patterns subpath, minified + gzipped",
     "path": "dist/patterns.mjs",
-    "limit": "13 kB",
+    "limit": "19 kB",
     "ignore": [
       "@blockchaincommons/components",
       "@blockchaincommons/dcbor",

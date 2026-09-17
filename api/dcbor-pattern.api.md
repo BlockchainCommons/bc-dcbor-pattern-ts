@@ -47,7 +47,7 @@ export const anyTagged: () => Pattern;
 export const anyText: () => Pattern;
 
 // @public
-export const boolean: (value: boolean) => Pattern;
+export const bool: (value: boolean) => Pattern;
 
 // @public
 export const byteString: (value: Uint8Array) => Pattern;
@@ -347,7 +347,7 @@ export type MetaPattern = {
 };
 
 // @public
-export const not: (pattern: Pattern) => Pattern;
+export const notMatching: (pattern: Pattern) => Pattern;
 
 // @public
 export const nullValue: () => Pattern;
@@ -391,7 +391,7 @@ export interface ParseOptions {
 export function parsePattern(input: string, options?: ParseOptions): Pattern;
 
 // @public
-export function parsePatternPrefix(input: string, options?: ParseOptions): PatternPrefix;
+export function parsePatternPartial(input: string, options?: ParseOptions): PatternPartial;
 
 // @public
 export type Path = readonly Cbor[];
@@ -418,7 +418,7 @@ export type Pattern = {
 export const patternEquals: (a: Pattern, b: Pattern) => boolean;
 
 // @public
-export interface PatternPrefix {
+export interface PatternPartial {
     readonly length: number;
     readonly pattern: Pattern;
 }
@@ -521,7 +521,7 @@ export type TokenKind = "And" | "Or" | "Not" | "RepeatZeroOrMore" | "RepeatZeroO
 export function tryParsePattern(input: string, options?: ParseOptions): DcborResult<Pattern, DcborPatternError>;
 
 // @public
-export function tryParsePatternPrefix(input: string, options?: ParseOptions): DcborResult<PatternPrefix, DcborPatternError>;
+export function tryParsePatternPartial(input: string, options?: ParseOptions): DcborResult<PatternPartial, DcborPatternError>;
 
 // @public
 export type ValuePattern = {

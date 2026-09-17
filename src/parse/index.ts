@@ -1,20 +1,25 @@
 /**
  * Parsing pattern text: `parsePattern` throws, `tryParsePattern` returns
- * the error; the `…Prefix` forms parse the pattern at the start of a
+ * the error; the `…Partial` forms parse the pattern at the start of a
  * longer text and report how much they consumed.
  */
 import type { Pattern } from "../pattern";
 import { type DcborResult, DcborPatternError } from "../error";
-import { DEFAULT_MAX_DEPTH, parseAll, parsePrefix } from "./parser";
+import { parseAll, parsePartial } from "./parser";
 
-/** How deep a pattern may nest; the field has a default. */
+/** An optional limit on how deep a pattern may nest. */
 export interface ParseOptions {
-  /** The deepest nesting of groups, captures, `search`, arrays, maps and tagged values accepted (a positive integer), 500 by default. */
+  /**
+   * The deepest nesting of groups, captures, `search`, arrays, maps and
+   * tagged values accepted (a positive integer). No limit by default: text
+   * nested a few thousand levels deep then exhausts the engine's stack with
+   * a `RangeError`.
+   */
   readonly maxDepth?: number | undefined;
 }
 
-/** A parsed pattern prefix and how many UTF-16 code units it consumed. */
-export interface PatternPrefix {
+/** A parsed pattern and how many UTF-16 code units of the text it consumed. */
+export interface PatternPartial {
   /** The pattern. */
   readonly pattern: Pattern;
   /** How many UTF-16 code units it consumed, trailing whitespace included. */
@@ -34,12 +39,12 @@ const requireSource = (input: string): void => {
   if (typeof input !== "string") throw new TypeError("pattern source must be a string");
 };
 
-const resolveMaxDepth = (options: ParseOptions | undefined): number => {
+const resolveMaxDepth = (options: ParseOptions | undefined): number | undefined => {
   if (options !== undefined && (options === null || typeof options !== "object")) {
     throw new TypeError("options must be an object");
   }
   const maxDepth = options?.maxDepth;
-  if (maxDepth === undefined) return DEFAULT_MAX_DEPTH;
+  if (maxDepth === undefined) return undefined;
   if (typeof maxDepth !== "number" || !Number.isInteger(maxDepth) || maxDepth < 1) {
     throw new RangeError("maxDepth must be a positive integer");
   }
@@ -49,7 +54,7 @@ const resolveMaxDepth = (options: ParseOptions | undefined): number => {
 /**
  * Parses a whole pattern string; whitespace may follow the pattern.
  *
- * @throws {DcborPatternError} If the string is not a pattern, has trailing input, or nests deeper than `maxDepth`
+ * @throws {DcborPatternError} If the string is not a pattern, has trailing input, or nests deeper than a given `maxDepth`
  * @throws {TypeError} If `input` is not a string
  * @throws {RangeError} If `maxDepth` is not a positive integer
  */
@@ -75,16 +80,16 @@ export function tryParsePattern(
  * @throws {TypeError} If `input` is not a string
  * @throws {RangeError} If `maxDepth` is not a positive integer
  */
-export function parsePatternPrefix(input: string, options?: ParseOptions): PatternPrefix {
+export function parsePatternPartial(input: string, options?: ParseOptions): PatternPartial {
   requireSource(input);
-  const [pattern, length] = parsePrefix(input, resolveMaxDepth(options));
+  const [pattern, length] = parsePartial(input, resolveMaxDepth(options));
   return { pattern, length };
 }
 
-/** `parsePatternPrefix` with the error returned instead of thrown; a `TypeError` or `RangeError` still throws. */
-export function tryParsePatternPrefix(
+/** `parsePatternPartial` with the error returned instead of thrown; a `TypeError` or `RangeError` still throws. */
+export function tryParsePatternPartial(
   input: string,
   options?: ParseOptions,
-): DcborResult<PatternPrefix, DcborPatternError> {
-  return attempt(() => parsePatternPrefix(input, options));
+): DcborResult<PatternPartial, DcborPatternError> {
+  return attempt(() => parsePatternPartial(input, options));
 }
