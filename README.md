@@ -208,10 +208,6 @@ matches the same strings when the pattern is parsed:
   pathological regex can take exponential time where the reference's
   engine is linear.
 
-The translation is proven against the reference's engine by a differential
-corpus of regex sources over text and byte subjects, replayed by
-`tests/rust-validation`.
-
 ## Status - Beta
 
 `bc-dcbor-pattern-ts` is currently under active development and in beta testing. It should not be used for production tasks until it has had further testing and auditing. See [Blockchain Commons' Development Phases](https://github.com/BlockchainCommons/Community/blob/master/release-path.md).
